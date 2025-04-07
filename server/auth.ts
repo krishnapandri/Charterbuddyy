@@ -6,7 +6,6 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
-import createMemoryStore from "memorystore";
 
 declare global {
   namespace Express {
@@ -15,7 +14,6 @@ declare global {
 }
 
 const scryptAsync = promisify(scrypt);
-const MemoryStore = createMemoryStore(session);
 
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
@@ -35,9 +33,7 @@ export function setupAuth(app: Express) {
     secret: process.env.SESSION_SECRET || "cfa-practice-hub-secret",
     resave: false,
     saveUninitialized: false,
-    store: new MemoryStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    }),
+    store: storage.sessionStore,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
@@ -95,12 +91,12 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: Error | null, user: any, info: any) => {
       if (err) return next(err);
       if (!user) {
         return res.status(401).json({ message: "Invalid username or password" });
       }
-      req.login(user, (err) => {
+      req.login(user, (err: Error | null) => {
         if (err) return next(err);
         return res.status(200).json(user);
       });

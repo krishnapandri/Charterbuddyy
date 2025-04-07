@@ -11,12 +11,20 @@ import {
   insertTopicSchema
 } from "@shared/schema";
 import { z } from "zod";
+import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // GET /api/user - Get current user info (for demo purposes)
+  // Set up authentication routes
+  setupAuth(app);
+  // GET /api/user - Get current authenticated user info
   app.get("/api/user", async (req, res) => {
-    // For demo, we'll fetch the dummy user (ID 1)
-    const user = await storage.getUser(1);
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    const userId = req.user.id;
+    const user = await storage.getUser(userId);
+    
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }

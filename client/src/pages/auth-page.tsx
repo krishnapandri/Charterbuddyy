@@ -281,7 +281,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>CFA Level</FormLabel>
                           <FormControl>
-                            <Input disabled {...field} />
+                            <Input disabled {...field} value={field.value} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

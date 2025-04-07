@@ -21,9 +21,14 @@ import {
   type PracticeSet,
   type InsertPracticeSet
 } from "@shared/schema";
+import session from "express-session";
+import createMemoryStore from "memorystore";
 
 // Interface for storage operations
 export interface IStorage {
+  // Session store for authentication
+  sessionStore: session.Store;
+  
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -78,7 +83,16 @@ export class MemStorage implements IStorage {
   private userActivityIdCounter: number;
   private practiceSetIdCounter: number;
   
+  // Session store for authentication
+  public sessionStore: session.Store;
+  
   constructor() {
+    // Initialize the MemoryStore for sessions
+    const MemoryStore = createMemoryStore(session);
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    });
+    
     this.users = new Map();
     this.topics = new Map();
     this.questions = new Map();

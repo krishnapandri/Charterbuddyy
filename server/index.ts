@@ -2,6 +2,9 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+// Set a default session secret if not provided in environment variables
+process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'cfaprep-secret-key-development';
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
