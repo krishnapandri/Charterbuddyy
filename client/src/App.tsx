@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Practice from "@/pages/practice";
 import Analytics from "@/pages/analytics";
+import ManageQuestions from "@/pages/manage-questions";
 
 function Router() {
   return (
@@ -13,6 +14,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/practice/:topicId" component={Practice} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/manage-questions" component={ManageQuestions} />
       <Route component={NotFound} />
     </Switch>
   );

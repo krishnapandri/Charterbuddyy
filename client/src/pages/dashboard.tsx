@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 import { SideNavigation } from '@/components/layout/side-navigation';
 import { ProgressSummary } from '@/components/dashboard/progress-summary';
 import { RecentActivity } from '@/components/dashboard/recent-activity';
 import { RecommendedSets } from '@/components/dashboard/recommended-sets';
 import { TopicBarChart } from '@/components/analytics/topic-bar-chart';
 import { Card, CardContent } from '@/components/ui/card';
-import { Bell } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Bell, PlusCircle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export default function Dashboard() {
@@ -161,9 +162,19 @@ export default function Dashboard() {
         {/* Dashboard Content */}
         <div className="p-6">
           {/* Welcome Section */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-neutral-800">Welcome back, {userData?.username}!</h2>
-            <p className="text-neutral-400">Continue your {userData?.level} preparation journey.</p>
+          <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-neutral-800">Welcome back, {userData?.username}!</h2>
+              <p className="text-neutral-400">Continue your {userData?.level} preparation journey.</p>
+            </div>
+            <div className="mt-4 md:mt-0">
+              <Link href="/manage-questions">
+                <Button className="flex items-center">
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                  Add Questions
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Progress Summary */}

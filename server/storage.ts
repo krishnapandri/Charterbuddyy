@@ -312,22 +312,24 @@ export class MemStorage implements IStorage {
       id: this.userIdCounter++,
       username: 'alex',
       password: 'password123',
-      level: 'Level II Candidate',
+      level: 'Level I Candidate',
       streakDays: 15,
       lastLoginDate: new Date()
     };
     this.users.set(user.id, user);
     
-    // Add sample topics
+    // Add sample topics - CFA Level 1 specific
     const topicData: InsertTopic[] = [
-      { name: 'Ethics & Professional Standards', description: 'Ethics, professional standards, and regulation', icon: 'book' },
-      { name: 'Economics', description: 'Microeconomics and macroeconomics', icon: 'book' },
-      { name: 'Financial Statement Analysis', description: 'Financial reporting and analysis', icon: 'book' },
-      { name: 'Corporate Finance', description: 'Corporate finance principles', icon: 'book' },
-      { name: 'Equity Investments', description: 'Equity valuation and analysis', icon: 'book' },
-      { name: 'Fixed Income', description: 'Fixed income securities and analysis', icon: 'book' },
-      { name: 'Derivatives', description: 'Derivative instruments and strategies', icon: 'book' },
-      { name: 'Portfolio Management', description: 'Portfolio management principles', icon: 'book' }
+      { name: 'Ethics & Professional Standards', description: 'Code of Ethics, Standards of Practice, and GIPS', icon: 'book' },
+      { name: 'Quantitative Methods', description: 'Time value of money, probability, and statistics', icon: 'book' },
+      { name: 'Economics', description: 'Microeconomics, macroeconomics, and international trade', icon: 'book' },
+      { name: 'Financial Statement Analysis', description: 'Balance sheet, income statement, and ratio analysis', icon: 'book' },
+      { name: 'Corporate Finance', description: 'Capital budgeting, cost of capital, and working capital management', icon: 'book' },
+      { name: 'Equity Investments', description: 'Market organization, indices, and stock valuation', icon: 'book' },
+      { name: 'Fixed Income', description: 'Bond valuation, risk, and term structure', icon: 'book' },
+      { name: 'Derivatives', description: 'Forwards, futures, options, and swaps', icon: 'book' },
+      { name: 'Alternative Investments', description: 'Real estate, private equity, hedge funds, and commodities', icon: 'book' },
+      { name: 'Portfolio Management', description: 'Risk management, asset allocation, and performance evaluation', icon: 'book' }
     ];
     
     const topics: Topic[] = topicData.map(t => {

@@ -6,7 +6,9 @@ import {
   insertUserAnswerSchema,
   insertUserProgressSchema,
   insertUserActivitySchema,
-  insertPracticeSetSchema
+  insertPracticeSetSchema,
+  insertQuestionSchema,
+  insertTopicSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -163,6 +165,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }));
     
     res.json(enrichedSets);
+  });
+
+  // POST /api/topics - Create a new topic
+  app.post("/api/topics", async (req, res) => {
+    try {
+      const topicData = insertTopicSchema.parse(req.body);
+      const topic = await storage.createTopic(topicData);
+      res.status(201).json(topic);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      res.status(500).json({ message: "Error creating topic" });
+    }
+  });
+
+  // POST /api/questions - Create a new question
+  app.post("/api/questions", async (req, res) => {
+    try {
+      const questionData = insertQuestionSchema.parse(req.body);
+      const question = await storage.createQuestion(questionData);
+      res.status(201).json(question);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      res.status(500).json({ message: "Error creating question" });
+    }
   });
 
   // GET /api/analytics/:userId - Get comprehensive user analytics
