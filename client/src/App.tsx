@@ -7,14 +7,18 @@ import Dashboard from "@/pages/dashboard";
 import Practice from "@/pages/practice";
 import Analytics from "@/pages/analytics";
 import ManageQuestions from "@/pages/manage-questions";
+import AuthPage from "@/pages/auth-page";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/practice/:topicId" component={Practice} />
-      <Route path="/analytics" component={Analytics} />
-      <Route path="/manage-questions" component={ManageQuestions} />
+      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/practice/:topicId" component={Practice} />
+      <ProtectedRoute path="/analytics" component={Analytics} />
+      <ProtectedRoute path="/manage-questions" component={ManageQuestions} />
+      <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -23,8 +27,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <AuthProvider>
+        <Router />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
