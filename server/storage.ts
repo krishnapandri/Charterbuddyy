@@ -37,16 +37,23 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserStreak(userId: number, streakDays: number): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  updateUser(id: number, userData: Partial<User>): Promise<User>;
+  deleteUser(id: number): Promise<void>;
   
   // Topic operations
   getAllTopics(): Promise<Topic[]>;
   getTopic(id: number): Promise<Topic | undefined>;
   createTopic(topic: InsertTopic): Promise<Topic>;
+  updateTopic(id: number, topicData: Partial<Topic>): Promise<Topic>;
+  deleteTopic(id: number): Promise<void>;
   
   // Question operations
   getQuestionsByTopic(topicId: number): Promise<Question[]>;
   getQuestion(id: number): Promise<Question | undefined>;
   createQuestion(question: InsertQuestion): Promise<Question>;
+  updateQuestion(id: number, questionData: Partial<Question>): Promise<Question>;
+  deleteQuestion(id: number): Promise<void>;
   
   // User answer operations
   createUserAnswer(answer: InsertUserAnswer): Promise<UserAnswer>;
@@ -64,8 +71,11 @@ export interface IStorage {
   
   // Practice sets operations
   getPracticeSets(topicId?: number): Promise<PracticeSet[]>;
+  getPracticeSet(id: number): Promise<PracticeSet | undefined>;
   getRecommendedPracticeSets(userId: number): Promise<PracticeSet[]>;
   createPracticeSet(practiceSet: InsertPracticeSet): Promise<PracticeSet>;
+  updatePracticeSet(id: number, practiceSetData: Partial<PracticeSet>): Promise<PracticeSet>;
+  deletePracticeSet(id: number): Promise<void>;
 }
 
 // In-memory storage implementation
@@ -144,6 +154,25 @@ export class MemStorage implements IStorage {
     return undefined;
   }
   
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+  
+  async updateUser(id: number, userData: Partial<User>): Promise<User> {
+    const user = await this.getUser(id);
+    if (!user) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    
+    const updatedUser = { ...user, ...userData };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+  
+  async deleteUser(id: number): Promise<void> {
+    this.users.delete(id);
+  }
+  
   // Topic operations
   async getAllTopics(): Promise<Topic[]> {
     return Array.from(this.topics.values());
@@ -158,6 +187,21 @@ export class MemStorage implements IStorage {
     const topic: Topic = { ...insertTopic, id };
     this.topics.set(id, topic);
     return topic;
+  }
+  
+  async updateTopic(id: number, topicData: Partial<Topic>): Promise<Topic> {
+    const topic = await this.getTopic(id);
+    if (!topic) {
+      throw new Error(`Topic with id ${id} not found`);
+    }
+    
+    const updatedTopic = { ...topic, ...topicData };
+    this.topics.set(id, updatedTopic);
+    return updatedTopic;
+  }
+  
+  async deleteTopic(id: number): Promise<void> {
+    this.topics.delete(id);
   }
   
   // Question operations
@@ -176,6 +220,21 @@ export class MemStorage implements IStorage {
     const question: Question = { ...insertQuestion, id };
     this.questions.set(id, question);
     return question;
+  }
+  
+  async updateQuestion(id: number, questionData: Partial<Question>): Promise<Question> {
+    const question = await this.getQuestion(id);
+    if (!question) {
+      throw new Error(`Question with id ${id} not found`);
+    }
+    
+    const updatedQuestion = { ...question, ...questionData };
+    this.questions.set(id, updatedQuestion);
+    return updatedQuestion;
+  }
+  
+  async deleteQuestion(id: number): Promise<void> {
+    this.questions.delete(id);
   }
   
   // User answer operations
@@ -271,6 +330,10 @@ export class MemStorage implements IStorage {
     return topicId ? sets.filter(set => set.topicId === topicId) : sets;
   }
   
+  async getPracticeSet(id: number): Promise<PracticeSet | undefined> {
+    return this.practiceSets.get(id);
+  }
+  
   async getRecommendedPracticeSets(userId: number): Promise<PracticeSet[]> {
     return Array.from(this.practiceSets.values())
       .filter(set => set.isRecommended)
@@ -282,6 +345,21 @@ export class MemStorage implements IStorage {
     const practiceSet: PracticeSet = { ...insertPracticeSet, id };
     this.practiceSets.set(id, practiceSet);
     return practiceSet;
+  }
+  
+  async updatePracticeSet(id: number, practiceSetData: Partial<PracticeSet>): Promise<PracticeSet> {
+    const practiceSet = await this.getPracticeSet(id);
+    if (!practiceSet) {
+      throw new Error(`Practice set with id ${id} not found`);
+    }
+    
+    const updatedPracticeSet = { ...practiceSet, ...practiceSetData };
+    this.practiceSets.set(id, updatedPracticeSet);
+    return updatedPracticeSet;
+  }
+  
+  async deletePracticeSet(id: number): Promise<void> {
+    this.practiceSets.delete(id);
   }
   
   // Helper methods
@@ -528,6 +606,27 @@ export class DatabaseStorage implements IStorage {
     return updatedUser;
   }
   
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users);
+  }
+  
+  async updateUser(id: number, userData: Partial<User>): Promise<User> {
+    const [updatedUser] = await db.update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    
+    return updatedUser;
+  }
+  
+  async deleteUser(id: number): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+  
   // Topic operations
   async getAllTopics(): Promise<Topic[]> {
     return db.select().from(topics);
@@ -543,6 +642,23 @@ export class DatabaseStorage implements IStorage {
     return topic;
   }
   
+  async updateTopic(id: number, topicData: Partial<Topic>): Promise<Topic> {
+    const [updatedTopic] = await db.update(topics)
+      .set(topicData)
+      .where(eq(topics.id, id))
+      .returning();
+    
+    if (!updatedTopic) {
+      throw new Error(`Topic with id ${id} not found`);
+    }
+    
+    return updatedTopic;
+  }
+  
+  async deleteTopic(id: number): Promise<void> {
+    await db.delete(topics).where(eq(topics.id, id));
+  }
+  
   // Question operations
   async getQuestionsByTopic(topicId: number): Promise<Question[]> {
     return db.select().from(questions).where(eq(questions.topicId, topicId));
@@ -556,6 +672,23 @@ export class DatabaseStorage implements IStorage {
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
     const [question] = await db.insert(questions).values(insertQuestion).returning();
     return question;
+  }
+  
+  async updateQuestion(id: number, questionData: Partial<Question>): Promise<Question> {
+    const [updatedQuestion] = await db.update(questions)
+      .set(questionData)
+      .where(eq(questions.id, id))
+      .returning();
+    
+    if (!updatedQuestion) {
+      throw new Error(`Question with id ${id} not found`);
+    }
+    
+    return updatedQuestion;
+  }
+  
+  async deleteQuestion(id: number): Promise<void> {
+    await db.delete(questions).where(eq(questions.id, id));
   }
   
   // User answer operations
@@ -663,6 +796,11 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(practiceSets);
   }
   
+  async getPracticeSet(id: number): Promise<PracticeSet | undefined> {
+    const [practiceSet] = await db.select().from(practiceSets).where(eq(practiceSets.id, id));
+    return practiceSet;
+  }
+  
   async getRecommendedPracticeSets(userId: number): Promise<PracticeSet[]> {
     return db.select().from(practiceSets)
       .where(eq(practiceSets.isRecommended, true))
@@ -674,6 +812,23 @@ export class DatabaseStorage implements IStorage {
       .values(insertPracticeSet)
       .returning();
     return practiceSet;
+  }
+  
+  async updatePracticeSet(id: number, practiceSetData: Partial<PracticeSet>): Promise<PracticeSet> {
+    const [updatedPracticeSet] = await db.update(practiceSets)
+      .set(practiceSetData)
+      .where(eq(practiceSets.id, id))
+      .returning();
+    
+    if (!updatedPracticeSet) {
+      throw new Error(`Practice set with id ${id} not found`);
+    }
+    
+    return updatedPracticeSet;
+  }
+  
+  async deletePracticeSet(id: number): Promise<void> {
+    await db.delete(practiceSets).where(eq(practiceSets.id, id));
   }
   
   // Helper methods

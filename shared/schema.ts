@@ -9,6 +9,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   level: text("level").notNull().default("Level I Candidate"),
+  role: text("role").notNull().default("student"), // 'admin' or 'student'
   streakDays: integer("streak_days").notNull().default(0),
   lastLoginDate: timestamp("last_login_date").notNull().default(new Date()),
 });
@@ -17,6 +18,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   level: true,
+  role: true,
 });
 
 // Topics table
