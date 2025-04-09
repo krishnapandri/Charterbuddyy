@@ -1,6 +1,7 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // Users table
 export const users = pgTable("users", {
@@ -35,7 +36,7 @@ export const insertTopicSchema = createInsertSchema(topics).pick({
 // Questions table
 export const questions = pgTable("questions", {
   id: serial("id").primaryKey(),
-  topicId: integer("topic_id").notNull(),
+  topicId: integer("topic_id").notNull().references(() => topics.id),
   subtopic: text("subtopic"),
   questionText: text("question_text").notNull(),
   context: text("context"),
@@ -65,8 +66,8 @@ export const insertQuestionSchema = createInsertSchema(questions).pick({
 // User answers tracking
 export const userAnswers = pgTable("user_answers", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  questionId: integer("question_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  questionId: integer("question_id").notNull().references(() => questions.id),
   userOption: text("user_option").notNull(),
   isCorrect: boolean("is_correct").notNull(),
   timeSpent: integer("time_spent").notNull(), // in seconds
@@ -84,8 +85,8 @@ export const insertUserAnswerSchema = createInsertSchema(userAnswers).pick({
 // User progress by topic
 export const userProgress = pgTable("user_progress", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  topicId: integer("topic_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  topicId: integer("topic_id").notNull().references(() => topics.id),
   questionsAttempted: integer("questions_attempted").notNull().default(0),
   questionsCorrect: integer("questions_correct").notNull().default(0),
   totalTimeSpent: integer("total_time_spent").notNull().default(0), // in seconds
@@ -103,9 +104,9 @@ export const insertUserProgressSchema = createInsertSchema(userProgress).pick({
 // User activity tracking
 export const userActivity = pgTable("user_activity", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id),
   activityType: text("activity_type").notNull(), // practice_completed, badge_earned, etc.
-  topicId: integer("topic_id"),
+  topicId: integer("topic_id").references(() => topics.id),
   details: json("details"),
   activityDate: timestamp("activity_date").notNull().default(new Date()),
 });
@@ -121,7 +122,7 @@ export const insertUserActivitySchema = createInsertSchema(userActivity).pick({
 export const practiceSets = pgTable("practice_sets", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  topicId: integer("topic_id").notNull(),
+  topicId: integer("topic_id").notNull().references(() => topics.id),
   subtopic: text("subtopic"),
   questionCount: integer("question_count").notNull(),
   estimatedTime: integer("estimated_time").notNull(), // in minutes
@@ -140,6 +141,67 @@ export const insertPracticeSetSchema = createInsertSchema(practiceSets).pick({
   isRecommended: true,
   status: true,
 });
+
+// Relation definitions
+export const usersRelations = relations(users, ({ many }) => ({
+  userAnswers: many(userAnswers),
+  userProgress: many(userProgress),
+  userActivity: many(userActivity)
+}));
+
+export const topicsRelations = relations(topics, ({ many }) => ({
+  questions: many(questions),
+  userProgress: many(userProgress),
+  practiceSets: many(practiceSets)
+}));
+
+export const questionsRelations = relations(questions, ({ one, many }) => ({
+  topic: one(topics, {
+    fields: [questions.topicId],
+    references: [topics.id]
+  }),
+  userAnswers: many(userAnswers)
+}));
+
+export const userAnswersRelations = relations(userAnswers, ({ one }) => ({
+  user: one(users, {
+    fields: [userAnswers.userId],
+    references: [users.id]
+  }),
+  question: one(questions, {
+    fields: [userAnswers.questionId],
+    references: [questions.id]
+  })
+}));
+
+export const userProgressRelations = relations(userProgress, ({ one }) => ({
+  user: one(users, {
+    fields: [userProgress.userId],
+    references: [users.id]
+  }),
+  topic: one(topics, {
+    fields: [userProgress.topicId],
+    references: [topics.id]
+  })
+}));
+
+export const userActivityRelations = relations(userActivity, ({ one }) => ({
+  user: one(users, {
+    fields: [userActivity.userId],
+    references: [users.id]
+  }),
+  topic: one(topics, {
+    fields: [userActivity.topicId],
+    references: [topics.id]
+  })
+}));
+
+export const practiceSetsRelations = relations(practiceSets, ({ one }) => ({
+  topic: one(topics, {
+    fields: [practiceSets.topicId],
+    references: [topics.id]
+  })
+}));
 
 // Types
 export type User = typeof users.$inferSelect;

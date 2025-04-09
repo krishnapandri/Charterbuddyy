@@ -23,6 +23,9 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import ConnectPgSimple from "connect-pg-simple";
+import { db, pool } from "./db";
+import { eq, and, desc } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -481,4 +484,236 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database storage implementation
+export class DatabaseStorage implements IStorage {
+  // Session store for authentication
+  public sessionStore: session.Store;
+  
+  constructor() {
+    // Initialize the PostgreSQL session store
+    const PostgresSessionStore = ConnectPgSimple(session);
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
+      tableName: 'session'
+    });
+  }
+  
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+  
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+  
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values({
+      ...insertUser,
+      streakDays: 0,
+      lastLoginDate: new Date()
+    }).returning();
+    return user;
+  }
+  
+  async updateUserStreak(userId: number, streakDays: number): Promise<User | undefined> {
+    const [updatedUser] = await db.update(users)
+      .set({ streakDays, lastLoginDate: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return updatedUser;
+  }
+  
+  // Topic operations
+  async getAllTopics(): Promise<Topic[]> {
+    return db.select().from(topics);
+  }
+  
+  async getTopic(id: number): Promise<Topic | undefined> {
+    const [topic] = await db.select().from(topics).where(eq(topics.id, id));
+    return topic;
+  }
+  
+  async createTopic(insertTopic: InsertTopic): Promise<Topic> {
+    const [topic] = await db.insert(topics).values(insertTopic).returning();
+    return topic;
+  }
+  
+  // Question operations
+  async getQuestionsByTopic(topicId: number): Promise<Question[]> {
+    return db.select().from(questions).where(eq(questions.topicId, topicId));
+  }
+  
+  async getQuestion(id: number): Promise<Question | undefined> {
+    const [question] = await db.select().from(questions).where(eq(questions.id, id));
+    return question;
+  }
+  
+  async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
+    const [question] = await db.insert(questions).values(insertQuestion).returning();
+    return question;
+  }
+  
+  // User answer operations
+  async createUserAnswer(insertAnswer: InsertUserAnswer): Promise<UserAnswer> {
+    const [answer] = await db.insert(userAnswers)
+      .values({
+        ...insertAnswer,
+        answeredAt: new Date()
+      })
+      .returning();
+    
+    // Update user progress
+    await this.updateUserProgressAfterAnswer(answer);
+    
+    return answer;
+  }
+  
+  async getUserAnswers(userId: number): Promise<UserAnswer[]> {
+    return db.select().from(userAnswers).where(eq(userAnswers.userId, userId));
+  }
+  
+  async getUserAnswersByTopic(userId: number, topicId: number): Promise<UserAnswer[]> {
+    // Join userAnswers with questions to filter by topicId
+    const result = await db.select({
+      userAnswer: userAnswers
+    })
+    .from(userAnswers)
+    .innerJoin(questions, eq(userAnswers.questionId, questions.id))
+    .where(and(
+      eq(userAnswers.userId, userId),
+      eq(questions.topicId, topicId)
+    ));
+    
+    // Extract userAnswer from the result
+    return result.map(r => r.userAnswer);
+  }
+  
+  // User progress operations
+  async getUserProgress(userId: number): Promise<UserProgress[]> {
+    return db.select().from(userProgress).where(eq(userProgress.userId, userId));
+  }
+  
+  async getUserProgressByTopic(userId: number, topicId: number): Promise<UserProgress | undefined> {
+    const [progress] = await db.select().from(userProgress)
+      .where(and(
+        eq(userProgress.userId, userId),
+        eq(userProgress.topicId, topicId)
+      ));
+    return progress;
+  }
+  
+  async createOrUpdateUserProgress(insertProgress: InsertUserProgress): Promise<UserProgress> {
+    const existingProgress = await this.getUserProgressByTopic(
+      insertProgress.userId,
+      insertProgress.topicId
+    );
+    
+    if (existingProgress) {
+      // Update existing progress
+      const [updatedProgress] = await db.update(userProgress)
+        .set({
+          questionsAttempted: insertProgress.questionsAttempted,
+          questionsCorrect: insertProgress.questionsCorrect,
+          totalTimeSpent: insertProgress.totalTimeSpent,
+          lastUpdated: new Date()
+        })
+        .where(eq(userProgress.id, existingProgress.id))
+        .returning();
+      return updatedProgress;
+    } else {
+      // Create new progress
+      const [progress] = await db.insert(userProgress)
+        .values({
+          ...insertProgress,
+          lastUpdated: new Date()
+        })
+        .returning();
+      return progress;
+    }
+  }
+  
+  // User activity operations
+  async getUserActivity(userId: number, limit: number = 10): Promise<UserActivity[]> {
+    return db.select().from(userActivity)
+      .where(eq(userActivity.userId, userId))
+      .orderBy(desc(userActivity.activityDate))
+      .limit(limit);
+  }
+  
+  async createUserActivity(insertActivity: InsertUserActivity): Promise<UserActivity> {
+    const [activity] = await db.insert(userActivity)
+      .values({
+        ...insertActivity,
+        activityDate: new Date()
+      })
+      .returning();
+    return activity;
+  }
+  
+  // Practice sets operations
+  async getPracticeSets(topicId?: number): Promise<PracticeSet[]> {
+    if (topicId) {
+      return db.select().from(practiceSets).where(eq(practiceSets.topicId, topicId));
+    }
+    return db.select().from(practiceSets);
+  }
+  
+  async getRecommendedPracticeSets(userId: number): Promise<PracticeSet[]> {
+    return db.select().from(practiceSets)
+      .where(eq(practiceSets.isRecommended, true))
+      .limit(3);
+  }
+  
+  async createPracticeSet(insertPracticeSet: InsertPracticeSet): Promise<PracticeSet> {
+    const [practiceSet] = await db.insert(practiceSets)
+      .values(insertPracticeSet)
+      .returning();
+    return practiceSet;
+  }
+  
+  // Helper methods
+  private async updateUserProgressAfterAnswer(answer: UserAnswer): Promise<void> {
+    const question = await this.getQuestion(answer.questionId);
+    if (!question) return;
+    
+    const topicId = question.topicId;
+    const progress = await this.getUserProgressByTopic(answer.userId, topicId);
+    
+    if (progress) {
+      await this.createOrUpdateUserProgress({
+        userId: answer.userId,
+        topicId,
+        questionsAttempted: progress.questionsAttempted + 1,
+        questionsCorrect: progress.questionsCorrect + (answer.isCorrect ? 1 : 0),
+        totalTimeSpent: progress.totalTimeSpent + answer.timeSpent,
+      });
+    } else {
+      await this.createOrUpdateUserProgress({
+        userId: answer.userId,
+        topicId,
+        questionsAttempted: 1,
+        questionsCorrect: answer.isCorrect ? 1 : 0,
+        totalTimeSpent: answer.timeSpent,
+      });
+    }
+    
+    // Record activity
+    await this.createUserActivity({
+      userId: answer.userId,
+      activityType: 'question_answered',
+      topicId,
+      details: { 
+        questionId: answer.questionId,
+        isCorrect: answer.isCorrect,
+        timeSpent: answer.timeSpent
+      }
+    });
+  }
+}
+
+// Use Database Storage
+export const storage = new DatabaseStorage();
