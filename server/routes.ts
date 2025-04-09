@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
@@ -16,6 +16,20 @@ import { setupAuth } from "./auth";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
+
+  // Middleware to check if user is admin
+  const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Unauthorized. Admin access required." });
+    }
+    
+    next();
+  };
+  
   // GET /api/user - Get current authenticated user info
   app.get("/api/user", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -175,8 +189,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(enrichedSets);
   });
 
-  // POST /api/topics - Create a new topic
-  app.post("/api/topics", async (req, res) => {
+  // GET /api/questions/all - Get all questions (admin only)
+  app.get("/api/questions/all", isAdmin, async (req, res) => {
+    try {
+      const allQuestions = [];
+      const topics = await storage.getAllTopics();
+      
+      for (const topic of topics) {
+        const questions = await storage.getQuestionsByTopic(topic.id);
+        allQuestions.push(...questions);
+      }
+      
+      res.json(allQuestions);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching questions" });
+    }
+  });
+  
+  // GET /api/users - Get all users (admin only)
+  app.get("/api/users", isAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      
+      // Remove passwords from the response
+      const usersWithoutPasswords = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching users" });
+    }
+  });
+  
+  // POST /api/topics - Create a new topic (admin only)
+  app.post("/api/topics", isAdmin, async (req, res) => {
     try {
       const topicData = insertTopicSchema.parse(req.body);
       const topic = await storage.createTopic(topicData);
@@ -188,9 +236,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error creating topic" });
     }
   });
+  
+  // PATCH /api/topics/:id - Update a topic (admin only)
+  app.patch("/api/topics/:id", isAdmin, async (req, res) => {
+    try {
+      const topicId = parseInt(req.params.id);
+      
+      // Get the topic first to ensure it exists
+      const existingTopic = await storage.getTopic(topicId);
+      if (!existingTopic) {
+        return res.status(404).json({ message: "Topic not found" });
+      }
+      
+      const topicData = req.body; // Already validated by isAdmin middleware
+      const topic = await storage.updateTopic(topicId, topicData);
+      res.json(topic);
+    } catch (error) {
+      res.status(500).json({ message: "Error updating topic" });
+    }
+  });
+  
+  // DELETE /api/topics/:id - Delete a topic (admin only)
+  app.delete("/api/topics/:id", isAdmin, async (req, res) => {
+    try {
+      const topicId = parseInt(req.params.id);
+      
+      // Get the topic first to ensure it exists
+      const existingTopic = await storage.getTopic(topicId);
+      if (!existingTopic) {
+        return res.status(404).json({ message: "Topic not found" });
+      }
+      
+      await storage.deleteTopic(topicId);
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting topic" });
+    }
+  });
 
-  // POST /api/questions - Create a new question
-  app.post("/api/questions", async (req, res) => {
+  // POST /api/questions - Create a new question (admin only)
+  app.post("/api/questions", isAdmin, async (req, res) => {
     try {
       const questionData = insertQuestionSchema.parse(req.body);
       const question = await storage.createQuestion(questionData);
@@ -200,6 +285,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ errors: error.errors });
       }
       res.status(500).json({ message: "Error creating question" });
+    }
+  });
+  
+  // PATCH /api/questions/:id - Update a question (admin only)
+  app.patch("/api/questions/:id", isAdmin, async (req, res) => {
+    try {
+      const questionId = parseInt(req.params.id);
+      
+      // Get the question first to ensure it exists
+      const existingQuestion = await storage.getQuestion(questionId);
+      if (!existingQuestion) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+      
+      const questionData = req.body; // Already validated by isAdmin middleware
+      const question = await storage.updateQuestion(questionId, questionData);
+      res.json(question);
+    } catch (error) {
+      res.status(500).json({ message: "Error updating question" });
+    }
+  });
+  
+  // DELETE /api/questions/:id - Delete a question (admin only)
+  app.delete("/api/questions/:id", isAdmin, async (req, res) => {
+    try {
+      const questionId = parseInt(req.params.id);
+      
+      // Get the question first to ensure it exists
+      const existingQuestion = await storage.getQuestion(questionId);
+      if (!existingQuestion) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+      
+      await storage.deleteQuestion(questionId);
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting question" });
+    }
+  });
+  
+  // POST /api/practice-sets - Create a practice set (admin only)
+  app.post("/api/practice-sets", isAdmin, async (req, res) => {
+    try {
+      const practiceSetData = insertPracticeSetSchema.parse(req.body);
+      const practiceSet = await storage.createPracticeSet(practiceSetData);
+      res.status(201).json(practiceSet);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      res.status(500).json({ message: "Error creating practice set" });
+    }
+  });
+  
+  // PATCH /api/practice-sets/:id - Update a practice set (admin only)
+  app.patch("/api/practice-sets/:id", isAdmin, async (req, res) => {
+    try {
+      const practiceSetId = parseInt(req.params.id);
+      
+      // Ensure the practice set exists
+      const practiceSet = await storage.getPracticeSet(practiceSetId);
+      if (!practiceSet) {
+        return res.status(404).json({ message: "Practice set not found" });
+      }
+      
+      const practiceSetData = req.body;
+      const updatedPracticeSet = await storage.updatePracticeSet(practiceSetId, practiceSetData);
+      res.json(updatedPracticeSet);
+    } catch (error) {
+      res.status(500).json({ message: "Error updating practice set" });
+    }
+  });
+  
+  // DELETE /api/practice-sets/:id - Delete a practice set (admin only)
+  app.delete("/api/practice-sets/:id", isAdmin, async (req, res) => {
+    try {
+      const practiceSetId = parseInt(req.params.id);
+      
+      // Ensure the practice set exists
+      const practiceSet = await storage.getPracticeSet(practiceSetId);
+      if (!practiceSet) {
+        return res.status(404).json({ message: "Practice set not found" });
+      }
+      
+      await storage.deletePracticeSet(practiceSetId);
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting practice set" });
+    }
+  });
+  
+  // PATCH /api/users/:id - Update a user (admin only)
+  app.patch("/api/users/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Ensure the user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const userData = req.body;
+      
+      // Hash password if it's being updated
+      if (userData.password) {
+        const { hashPassword } = await import('./auth');
+        userData.password = await hashPassword(userData.password);
+      }
+      
+      const updatedUser = await storage.updateUser(userId, userData);
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      res.status(500).json({ message: "Error updating user" });
+    }
+  });
+  
+  // DELETE /api/users/:id - Delete a user (admin only)
+  app.delete("/api/users/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Ensure the user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      await storage.deleteUser(userId);
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting user" });
     }
   });
 
