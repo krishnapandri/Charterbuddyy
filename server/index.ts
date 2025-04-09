@@ -1,10 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-
+import {seedDatabase} from '../scripts/seed-db'
 // Set a default session secret if not provided in environment variables
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'cfaprep-secret-key-development';
-
+// await (async ()=>seedDatabase())();
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -63,11 +63,12 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  // server.listen({
+  //   port,
+  //   host: "0.0.0.0",
+  //   reusePort: true,
+  // }, () => {
+  //   log(`serving on port ${port}`);
+  // });
+  server.listen(port,'0.0.0.0',()=>log(`serving on port ${port}`));
 })();

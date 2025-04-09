@@ -1,4 +1,4 @@
-import { db } from "../server/db";
+import {db} from '../server/db';
 import { 
   topics, 
   questions, 
@@ -17,7 +17,7 @@ async function hashPassword(password: string) {
   return `${buf.toString("hex")}.${salt}`;
 }
 
-async function seedDatabase() {
+export async function seedDatabase() {
   console.log("Starting database seeding...");
 
   try {
@@ -288,10 +288,10 @@ async function seedDatabase() {
   }
 }
 
-// Run the seed function
-seedDatabase()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error("Failed to seed database:", error);
-    process.exit(1);
-  });
+// // Run the seed function
+// seedDatabase()
+//   .then(() => process.exit(0))
+//   .catch((error) => {
+//     console.error("Failed to seed database:", error);
+//     process.exit(1);
+//   });
