@@ -97,37 +97,37 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
                 </div>
                 <div className="mt-1">
                   <Link href="/">
-                    <a className={cn(
-                      "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100",
+                    <div className={cn(
+                      "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer",
                       location === "/" && "bg-neutral-100"
                     )}>
                       <div className="flex items-center">
                         <ChevronRight className="h-5 w-5 text-neutral-400 mr-3" />
                         Overview
                       </div>
-                    </a>
+                    </div>
                   </Link>
                   <Link href="/analytics">
-                    <a className={cn(
-                      "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100",
+                    <div className={cn(
+                      "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer",
                       location === "/analytics" && "bg-neutral-100"
                     )}>
                       <div className="flex items-center">
                         <BarChart2 className="h-5 w-5 text-neutral-400 mr-3" />
                         Analytics
                       </div>
-                    </a>
+                    </div>
                   </Link>
                   <Link href="/study-plans">
-                    <a className={cn(
-                      "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100",
+                    <div className={cn(
+                      "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer",
                       location === "/study-plans" && "bg-neutral-100"
                     )}>
                       <div className="flex items-center">
                         <Calendar className="h-5 w-5 text-neutral-400 mr-3" />
                         Study Plans
                       </div>
-                    </a>
+                    </div>
                   </Link>
                 </div>
               </div>
@@ -140,8 +140,8 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
                 <div className="mt-1">
                   {topics.map((topic) => (
                     <Link key={topic.id} href={`/practice/${topic.id}`}>
-                      <a className={cn(
-                        "block px-4 py-2 text-sm hover:bg-neutral-100",
+                      <div className={cn(
+                        "block px-4 py-2 text-sm hover:bg-neutral-100 cursor-pointer",
                         activeTopic === topic.id && "active-topic"
                       )}>
                         <div className="flex items-center justify-between">
@@ -158,7 +158,7 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
                             </Badge>
                           )}
                         </div>
-                      </a>
+                      </div>
                     </Link>
                   ))}
                 </div>
@@ -167,14 +167,14 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
             
             {/* Footer links */}
             <div className="p-4 border-t border-neutral-200">
-              <a href="#" className="flex items-center text-sm text-neutral-800 hover:text-primary">
+              <div className="flex items-center text-sm text-neutral-800 hover:text-primary cursor-pointer">
                 <Settings className="h-5 w-5 text-neutral-400 mr-3" />
                 Settings
-              </a>
-              <a href="#" className="flex items-center mt-3 text-sm text-neutral-800 hover:text-primary">
+              </div>
+              <div className="flex items-center mt-3 text-sm text-neutral-800 hover:text-primary cursor-pointer">
                 <HelpCircle className="h-5 w-5 text-neutral-400 mr-3" />
                 Help Center
-              </a>
+              </div>
             </div>
           </div>
         </div>
