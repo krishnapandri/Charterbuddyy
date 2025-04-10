@@ -1,8 +1,7 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, foreignKey, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
-import { StudyPlanGenerationOptions } from "./types";
 
 // Users table
 export const users = pgTable("users", {
@@ -145,73 +144,19 @@ export const insertPracticeSetSchema = createInsertSchema(practiceSets).pick({
   status: true,
 });
 
-// Study Plans
-export const studyPlans = pgTable("study_plans", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  name: text("name").notNull(),
-  createdAt: timestamp("created_at").notNull().default(new Date()),
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
-  focusAreas: json("focus_areas").notNull(), // Array of topicIds with priority (1-3)
-  status: text("status").notNull().default("active"), // active, completed, archived
-  progress: integer("progress").notNull().default(0), // 0-100%
-  lastUpdated: timestamp("last_updated").notNull().default(new Date()),
-});
-
-export const insertStudyPlanSchema = createInsertSchema(studyPlans).pick({
-  userId: true,
-  name: true,
-  startDate: true,
-  endDate: true,
-  focusAreas: true,
-  status: true,
-  progress: true,
-});
-
-// Study Plan Items (daily tasks in a study plan)
-export const studyPlanItems = pgTable("study_plan_items", {
-  id: serial("id").primaryKey(),
-  planId: integer("plan_id").notNull().references(() => studyPlans.id),
-  topicId: integer("topic_id").notNull().references(() => topics.id),
-  practiceSetId: integer("practice_set_id").references(() => practiceSets.id),
-  title: text("title").notNull(),
-  description: text("description"),
-  scheduledDate: date("scheduled_date").notNull(),
-  estimatedDuration: integer("estimated_duration").notNull(), // minutes
-  status: text("status").notNull().default("pending"), // pending, in_progress, completed, overdue
-  completed: boolean("completed").notNull().default(false),
-  completedAt: timestamp("completed_at"),
-  priority: integer("priority").notNull().default(2), // 1-3: low, medium, high
-});
-
-export const insertStudyPlanItemSchema = createInsertSchema(studyPlanItems).pick({
-  planId: true,
-  topicId: true,
-  practiceSetId: true,
-  title: true,
-  description: true,
-  scheduledDate: true,
-  estimatedDuration: true,
-  status: true,
-  completed: true,
-  completedAt: true,
-  priority: true,
-});
+// Study Plans have been removed
 
 // Relation definitions
 export const usersRelations = relations(users, ({ many }) => ({
   userAnswers: many(userAnswers),
   userProgress: many(userProgress),
-  userActivity: many(userActivity),
-  studyPlans: many(studyPlans)
+  userActivity: many(userActivity)
 }));
 
 export const topicsRelations = relations(topics, ({ many }) => ({
   questions: many(questions),
   userProgress: many(userProgress),
-  practiceSets: many(practiceSets),
-  studyPlanItems: many(studyPlanItems)
+  practiceSets: many(practiceSets)
 }));
 
 export const questionsRelations = relations(questions, ({ one, many }) => ({
@@ -255,34 +200,10 @@ export const userActivityRelations = relations(userActivity, ({ one }) => ({
   })
 }));
 
-export const practiceSetsRelations = relations(practiceSets, ({ one, many }) => ({
+export const practiceSetsRelations = relations(practiceSets, ({ one }) => ({
   topic: one(topics, {
     fields: [practiceSets.topicId],
     references: [topics.id]
-  }),
-  studyPlanItems: many(studyPlanItems)
-}));
-
-export const studyPlansRelations = relations(studyPlans, ({ one, many }) => ({
-  user: one(users, {
-    fields: [studyPlans.userId],
-    references: [users.id]
-  }),
-  studyPlanItems: many(studyPlanItems)
-}));
-
-export const studyPlanItemsRelations = relations(studyPlanItems, ({ one }) => ({
-  studyPlan: one(studyPlans, {
-    fields: [studyPlanItems.planId],
-    references: [studyPlans.id]
-  }),
-  topic: one(topics, {
-    fields: [studyPlanItems.topicId],
-    references: [topics.id]
-  }),
-  practiceSet: one(practiceSets, {
-    fields: [studyPlanItems.practiceSetId],
-    references: [practiceSets.id]
   })
 }));
 
@@ -307,9 +228,3 @@ export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
 
 export type PracticeSet = typeof practiceSets.$inferSelect;
 export type InsertPracticeSet = z.infer<typeof insertPracticeSetSchema>;
-
-export type StudyPlan = typeof studyPlans.$inferSelect;
-export type InsertStudyPlan = z.infer<typeof insertStudyPlanSchema>;
-
-export type StudyPlanItem = typeof studyPlanItems.$inferSelect;
-export type InsertStudyPlanItem = z.infer<typeof insertStudyPlanItemSchema>;
