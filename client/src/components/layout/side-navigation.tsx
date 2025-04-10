@@ -3,7 +3,9 @@ import { useLocation, Link } from 'wouter';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Book, BarChart2, ChevronRight, Settings, HelpCircle, Menu } from 'lucide-react';
+import { Book, BarChart2, ChevronRight, Settings, HelpCircle, Menu, LogOut } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 
 export type Topic = {
   id: number;
@@ -27,6 +29,26 @@ type SideNavigationProps = {
 export function SideNavigation({ topics, user, activeTopic }: SideNavigationProps) {
   const [location] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const { logoutMutation } = useAuth();
+  const { toast } = useToast();
+
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast({
+          title: "Logged out",
+          description: "You have been successfully logged out",
+        });
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: "Failed to log out: " + error.message,
+          variant: "destructive",
+        });
+      }
+    });
+  };
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
@@ -164,6 +186,13 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
               <div className="flex items-center mt-3 text-sm text-neutral-800 hover:text-primary cursor-pointer">
                 <HelpCircle className="h-5 w-5 text-neutral-400 mr-3" />
                 Help Center
+              </div>
+              <div 
+                className="flex items-center mt-3 text-sm text-neutral-800 hover:text-destructive cursor-pointer"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-5 w-5 text-neutral-400 mr-3" />
+                Logout
               </div>
             </div>
           </div>

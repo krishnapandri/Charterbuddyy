@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Bell, PlusCircle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { AdminLoginDialog } from '@/components/admin-login-dialog';
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -167,7 +168,8 @@ export default function Dashboard() {
               <h2 className="text-2xl font-bold text-neutral-800">Welcome back, {userData?.username}!</h2>
               <p className="text-neutral-400">Continue your {userData?.level} preparation journey.</p>
             </div>
-            <div className="mt-4 md:mt-0">
+            <div className="mt-4 md:mt-0 flex space-x-2">
+              {userData?.role !== 'admin' && <AdminLoginDialog />}
               <Link href="/manage-questions">
                 <Button className="flex items-center">
                   <PlusCircle className="mr-2 h-5 w-5" />
