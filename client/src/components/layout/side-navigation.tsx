@@ -3,7 +3,7 @@ import { useLocation, Link } from 'wouter';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Book, BarChart2, ChevronLeft, ChevronRight, Settings, HelpCircle, Menu, LogOut } from 'lucide-react';
+import { Book, BarChart2, ChevronLeft, ChevronRight, Settings, HelpCircle, Menu, LogOut, Calendar } from 'lucide-react';
 
 export type Topic = {
   id: number;
@@ -115,6 +115,17 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
                       <div className="flex items-center">
                         <BarChart2 className="h-5 w-5 text-neutral-400 mr-3" />
                         Analytics
+                      </div>
+                    </a>
+                  </Link>
+                  <Link href="/study-plans">
+                    <a className={cn(
+                      "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100",
+                      location === "/study-plans" && "bg-neutral-100"
+                    )}>
+                      <div className="flex items-center">
+                        <Calendar className="h-5 w-5 text-neutral-400 mr-3" />
+                        Study Plans
                       </div>
                     </a>
                   </Link>

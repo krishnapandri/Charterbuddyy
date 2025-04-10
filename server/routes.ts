@@ -8,7 +8,9 @@ import {
   insertUserActivitySchema,
   insertPracticeSetSchema,
   insertQuestionSchema,
-  insertTopicSchema
+  insertTopicSchema,
+  insertStudyPlanSchema,
+  insertStudyPlanItemSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth } from "./auth";
