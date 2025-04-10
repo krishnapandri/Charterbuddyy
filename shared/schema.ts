@@ -35,10 +35,27 @@ export const insertTopicSchema = createInsertSchema(topics).pick({
   icon: true,
 });
 
+// Chapters table
+export const chapters = pgTable("chapters", {
+  id: serial("id").primaryKey(),
+  topicId: integer("topic_id").notNull().references(() => topics.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  order: integer("order").notNull().default(0), // For ordering chapters within a topic
+});
+
+export const insertChapterSchema = createInsertSchema(chapters).pick({
+  topicId: true,
+  name: true,
+  description: true,
+  order: true,
+});
+
 // Questions table
 export const questions = pgTable("questions", {
   id: serial("id").primaryKey(),
   topicId: integer("topic_id").notNull().references(() => topics.id),
+  chapterId: integer("chapter_id").references(() => chapters.id),
   subtopic: text("subtopic"),
   questionText: text("question_text").notNull(),
   context: text("context"),
@@ -53,6 +70,7 @@ export const questions = pgTable("questions", {
 
 export const insertQuestionSchema = createInsertSchema(questions).pick({
   topicId: true,
+  chapterId: true,
   subtopic: true,
   questionText: true,
   context: true,
@@ -155,14 +173,27 @@ export const usersRelations = relations(users, ({ many }) => ({
 
 export const topicsRelations = relations(topics, ({ many }) => ({
   questions: many(questions),
+  chapters: many(chapters),
   userProgress: many(userProgress),
   practiceSets: many(practiceSets)
+}));
+
+export const chaptersRelations = relations(chapters, ({ one, many }) => ({
+  topic: one(topics, {
+    fields: [chapters.topicId],
+    references: [topics.id]
+  }),
+  questions: many(questions)
 }));
 
 export const questionsRelations = relations(questions, ({ one, many }) => ({
   topic: one(topics, {
     fields: [questions.topicId],
     references: [topics.id]
+  }),
+  chapter: one(chapters, {
+    fields: [questions.chapterId],
+    references: [chapters.id]
   }),
   userAnswers: many(userAnswers)
 }));
