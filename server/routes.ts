@@ -8,7 +8,8 @@ import {
   insertUserActivitySchema,
   insertPracticeSetSchema,
   insertQuestionSchema,
-  insertTopicSchema
+  insertTopicSchema,
+  insertChapterSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth } from "./auth";
@@ -376,6 +377,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // GET /api/chapters/topic/:topicId - Get chapters for a topic
+  app.get("/api/chapters/topic/:topicId", async (req, res) => {
+    try {
+      const topicId = parseInt(req.params.topicId);
+      const chapters = await storage.getChaptersByTopic(topicId);
+      res.json(chapters);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching chapters" });
+    }
+  });
+
+  // GET /api/chapters/:id - Get a specific chapter
+  app.get("/api/chapters/:id", async (req, res) => {
+    try {
+      const chapterId = parseInt(req.params.id);
+      const chapter = await storage.getChapter(chapterId);
+      
+      if (!chapter) {
+        return res.status(404).json({ message: "Chapter not found" });
+      }
+      
+      res.json(chapter);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching chapter" });
+    }
+  });
+
+  // GET /api/questions/chapter/:chapterId - Get questions by chapter
+  app.get("/api/questions/chapter/:chapterId", async (req, res) => {
+    try {
+      const chapterId = parseInt(req.params.chapterId);
+      const questions = await storage.getQuestionsByChapter(chapterId);
+      res.json(questions);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching questions" });
+    }
+  });
+
+  // POST /api/chapters - Create a new chapter (admin only)
+  app.post("/api/chapters", isAdmin, async (req, res) => {
+    try {
+      const chapterData = insertChapterSchema.parse(req.body);
+      const chapter = await storage.createChapter(chapterData);
+      res.status(201).json(chapter);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      res.status(500).json({ message: "Error creating chapter" });
+    }
+  });
+
+  // PATCH /api/chapters/:id - Update a chapter (admin only)
+  app.patch("/api/chapters/:id", isAdmin, async (req, res) => {
+    try {
+      const chapterId = parseInt(req.params.id);
+      
+      // Get the chapter first to ensure it exists
+      const existingChapter = await storage.getChapter(chapterId);
+      if (!existingChapter) {
+        return res.status(404).json({ message: "Chapter not found" });
+      }
+      
+      const chapterData = req.body; // Already validated by isAdmin middleware
+      const chapter = await storage.updateChapter(chapterId, chapterData);
+      res.json(chapter);
+    } catch (error) {
+      res.status(500).json({ message: "Error updating chapter" });
+    }
+  });
+
+  // DELETE /api/chapters/:id - Delete a chapter (admin only)
+  app.delete("/api/chapters/:id", isAdmin, async (req, res) => {
+    try {
+      const chapterId = parseInt(req.params.id);
+      
+      // Get the chapter first to ensure it exists
+      const existingChapter = await storage.getChapter(chapterId);
+      if (!existingChapter) {
+        return res.status(404).json({ message: "Chapter not found" });
+      }
+      
+      await storage.deleteChapter(chapterId);
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting chapter" });
+    }
+  });
+
   // PATCH /api/users/:id - Update a user (admin only)
   app.patch("/api/users/:id", isAdmin, async (req, res) => {
     try {

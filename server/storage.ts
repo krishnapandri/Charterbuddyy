@@ -1,6 +1,7 @@
 import {
   users,
   topics,
+  chapters,
   questions,
   userAnswers,
   userProgress,
@@ -10,6 +11,8 @@ import {
   type InsertUser,
   type Topic,
   type InsertTopic,
+  type Chapter,
+  type InsertChapter,
   type Question,
   type InsertQuestion,
   type UserAnswer,
@@ -710,9 +713,52 @@ export class DatabaseStorage implements IStorage {
     await db.delete(topics).where(eq(topics.id, id));
   }
   
+  // Chapter operations
+  async getChaptersByTopic(topicId: number): Promise<Chapter[]> {
+    return db.select()
+      .from(chapters)
+      .where(eq(chapters.topicId, topicId))
+      .orderBy(chapters.order);
+  }
+  
+  async getChapter(id: number): Promise<Chapter | undefined> {
+    const [chapter] = await db.select()
+      .from(chapters)
+      .where(eq(chapters.id, id));
+    return chapter;
+  }
+  
+  async createChapter(insertChapter: InsertChapter): Promise<Chapter> {
+    const [chapter] = await db.insert(chapters)
+      .values(insertChapter)
+      .returning();
+    return chapter;
+  }
+  
+  async updateChapter(id: number, chapterData: Partial<Chapter>): Promise<Chapter> {
+    const [updatedChapter] = await db.update(chapters)
+      .set(chapterData)
+      .where(eq(chapters.id, id))
+      .returning();
+    
+    if (!updatedChapter) {
+      throw new Error(`Chapter with id ${id} not found`);
+    }
+    
+    return updatedChapter;
+  }
+  
+  async deleteChapter(id: number): Promise<void> {
+    await db.delete(chapters).where(eq(chapters.id, id));
+  }
+  
   // Question operations
   async getQuestionsByTopic(topicId: number): Promise<Question[]> {
     return db.select().from(questions).where(eq(questions.topicId, topicId));
+  }
+  
+  async getQuestionsByChapter(chapterId: number): Promise<Question[]> {
+    return db.select().from(questions).where(eq(questions.chapterId, chapterId));
   }
   
   async getQuestion(id: number): Promise<Question | undefined> {
