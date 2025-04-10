@@ -245,6 +245,9 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Topic = typeof topics.$inferSelect;
 export type InsertTopic = z.infer<typeof insertTopicSchema>;
 
+export type Chapter = typeof chapters.$inferSelect;
+export type InsertChapter = z.infer<typeof insertChapterSchema>;
+
 export type Question = typeof questions.$inferSelect;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
 

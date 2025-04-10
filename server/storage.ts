@@ -48,8 +48,16 @@ export interface IStorage {
   updateTopic(id: number, topicData: Partial<Topic>): Promise<Topic>;
   deleteTopic(id: number): Promise<void>;
   
+  // Chapter operations
+  getChaptersByTopic(topicId: number): Promise<Chapter[]>;
+  getChapter(id: number): Promise<Chapter | undefined>;
+  createChapter(chapter: InsertChapter): Promise<Chapter>;
+  updateChapter(id: number, chapterData: Partial<Chapter>): Promise<Chapter>;
+  deleteChapter(id: number): Promise<void>;
+  
   // Question operations
   getQuestionsByTopic(topicId: number): Promise<Question[]>;
+  getQuestionsByChapter(chapterId: number): Promise<Question[]>;
   getQuestion(id: number): Promise<Question | undefined>;
   createQuestion(question: InsertQuestion): Promise<Question>;
   updateQuestion(id: number, questionData: Partial<Question>): Promise<Question>;
@@ -82,6 +90,7 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private topics: Map<number, Topic>;
+  private chapters: Map<number, Chapter>;
   private questions: Map<number, Question>;
   private userAnswers: Map<number, UserAnswer>;
   private userProgress: Map<number, UserProgress>;
@@ -90,6 +99,7 @@ export class MemStorage implements IStorage {
   
   private userIdCounter: number;
   private topicIdCounter: number;
+  private chapterIdCounter: number;
   private questionIdCounter: number;
   private userAnswerIdCounter: number;
   private userProgressIdCounter: number;
@@ -108,6 +118,7 @@ export class MemStorage implements IStorage {
     
     this.users = new Map();
     this.topics = new Map();
+    this.chapters = new Map();
     this.questions = new Map();
     this.userAnswers = new Map();
     this.userProgress = new Map();
@@ -116,6 +127,7 @@ export class MemStorage implements IStorage {
     
     this.userIdCounter = 1;
     this.topicIdCounter = 1;
+    this.chapterIdCounter = 1;
     this.questionIdCounter = 1;
     this.userAnswerIdCounter = 1;
     this.userProgressIdCounter = 1;
@@ -204,10 +216,49 @@ export class MemStorage implements IStorage {
     this.topics.delete(id);
   }
   
+  // Chapter operations
+  async getChaptersByTopic(topicId: number): Promise<Chapter[]> {
+    return Array.from(this.chapters.values()).filter(
+      (chapter) => chapter.topicId === topicId
+    ).sort((a, b) => a.order - b.order);
+  }
+  
+  async getChapter(id: number): Promise<Chapter | undefined> {
+    return this.chapters.get(id);
+  }
+  
+  async createChapter(insertChapter: InsertChapter): Promise<Chapter> {
+    const id = this.chapterIdCounter++;
+    const chapter: Chapter = { ...insertChapter, id };
+    this.chapters.set(id, chapter);
+    return chapter;
+  }
+  
+  async updateChapter(id: number, chapterData: Partial<Chapter>): Promise<Chapter> {
+    const chapter = await this.getChapter(id);
+    if (!chapter) {
+      throw new Error(`Chapter with id ${id} not found`);
+    }
+    
+    const updatedChapter = { ...chapter, ...chapterData };
+    this.chapters.set(id, updatedChapter);
+    return updatedChapter;
+  }
+  
+  async deleteChapter(id: number): Promise<void> {
+    this.chapters.delete(id);
+  }
+  
   // Question operations
   async getQuestionsByTopic(topicId: number): Promise<Question[]> {
     return Array.from(this.questions.values()).filter(
       (question) => question.topicId === topicId
+    );
+  }
+  
+  async getQuestionsByChapter(chapterId: number): Promise<Question[]> {
+    return Array.from(this.questions.values()).filter(
+      (question) => question.chapterId === chapterId
     );
   }
   
