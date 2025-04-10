@@ -2,6 +2,7 @@ import { pgTable, text, serial, integer, boolean, timestamp, json, foreignKey, d
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
+import { StudyPlanGenerationOptions } from "./types";
 
 // Users table
 export const users = pgTable("users", {

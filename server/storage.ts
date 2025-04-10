@@ -6,6 +6,8 @@ import {
   userProgress,
   userActivity,
   practiceSets,
+  studyPlans,
+  studyPlanItems,
   type User,
   type InsertUser,
   type Topic,
@@ -19,8 +21,13 @@ import {
   type UserActivity,
   type InsertUserActivity,
   type PracticeSet,
-  type InsertPracticeSet
+  type InsertPracticeSet,
+  type StudyPlan,
+  type InsertStudyPlan,
+  type StudyPlanItem,
+  type InsertStudyPlanItem
 } from "@shared/schema";
+import { StudyPlanGenerationOptions, WeakArea, FocusAreaWithDetails } from "@shared/types";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import ConnectPgSimple from "connect-pg-simple";
@@ -76,6 +83,23 @@ export interface IStorage {
   createPracticeSet(practiceSet: InsertPracticeSet): Promise<PracticeSet>;
   updatePracticeSet(id: number, practiceSetData: Partial<PracticeSet>): Promise<PracticeSet>;
   deletePracticeSet(id: number): Promise<void>;
+  
+  // Study plan operations
+  getStudyPlans(userId: number): Promise<StudyPlan[]>;
+  getStudyPlan(id: number): Promise<StudyPlan | undefined>;
+  createStudyPlan(studyPlan: InsertStudyPlan): Promise<StudyPlan>;
+  updateStudyPlan(id: number, studyPlanData: Partial<StudyPlan>): Promise<StudyPlan>;
+  deleteStudyPlan(id: number): Promise<void>;
+  
+  // Study plan item operations
+  getStudyPlanItems(planId: number): Promise<StudyPlanItem[]>;
+  getStudyPlanItem(id: number): Promise<StudyPlanItem | undefined>;
+  createStudyPlanItem(studyPlanItem: InsertStudyPlanItem): Promise<StudyPlanItem>;
+  updateStudyPlanItem(id: number, studyPlanItemData: Partial<StudyPlanItem>): Promise<StudyPlanItem>;
+  deleteStudyPlanItem(id: number): Promise<void>;
+  
+  // Study plan generator
+  generateStudyPlan(userId: number, options: StudyPlanGenerationOptions): Promise<StudyPlan>;
 }
 
 // In-memory storage implementation
@@ -829,6 +853,234 @@ export class DatabaseStorage implements IStorage {
   
   async deletePracticeSet(id: number): Promise<void> {
     await db.delete(practiceSets).where(eq(practiceSets.id, id));
+  }
+  
+  // Study plan operations
+  async getStudyPlans(userId: number): Promise<StudyPlan[]> {
+    return db.select().from(studyPlans).where(eq(studyPlans.userId, userId));
+  }
+  
+  async getStudyPlan(id: number): Promise<StudyPlan | undefined> {
+    const [studyPlan] = await db.select().from(studyPlans).where(eq(studyPlans.id, id));
+    return studyPlan;
+  }
+  
+  async createStudyPlan(studyPlan: InsertStudyPlan): Promise<StudyPlan> {
+    const [newStudyPlan] = await db.insert(studyPlans)
+      .values(studyPlan)
+      .returning();
+    return newStudyPlan;
+  }
+  
+  async updateStudyPlan(id: number, studyPlanData: Partial<StudyPlan>): Promise<StudyPlan> {
+    const [updatedStudyPlan] = await db.update(studyPlans)
+      .set({ ...studyPlanData, lastUpdated: new Date() })
+      .where(eq(studyPlans.id, id))
+      .returning();
+    
+    if (!updatedStudyPlan) {
+      throw new Error(`Study plan with id ${id} not found`);
+    }
+    
+    return updatedStudyPlan;
+  }
+  
+  async deleteStudyPlan(id: number): Promise<void> {
+    // First delete all associated study plan items
+    await db.delete(studyPlanItems).where(eq(studyPlanItems.planId, id));
+    // Then delete the study plan
+    await db.delete(studyPlans).where(eq(studyPlans.id, id));
+  }
+  
+  // Study plan item operations
+  async getStudyPlanItems(planId: number): Promise<StudyPlanItem[]> {
+    return db.select().from(studyPlanItems)
+      .where(eq(studyPlanItems.planId, planId))
+      .orderBy(studyPlanItems.scheduledDate, studyPlanItems.priority);
+  }
+  
+  async getStudyPlanItem(id: number): Promise<StudyPlanItem | undefined> {
+    const [item] = await db.select().from(studyPlanItems).where(eq(studyPlanItems.id, id));
+    return item;
+  }
+  
+  async createStudyPlanItem(studyPlanItem: InsertStudyPlanItem): Promise<StudyPlanItem> {
+    const [newItem] = await db.insert(studyPlanItems)
+      .values(studyPlanItem)
+      .returning();
+    return newItem;
+  }
+  
+  async updateStudyPlanItem(id: number, studyPlanItemData: Partial<StudyPlanItem>): Promise<StudyPlanItem> {
+    const [updatedItem] = await db.update(studyPlanItems)
+      .set(studyPlanItemData)
+      .where(eq(studyPlanItems.id, id))
+      .returning();
+    
+    if (!updatedItem) {
+      throw new Error(`Study plan item with id ${id} not found`);
+    }
+    
+    return updatedItem;
+  }
+  
+  async deleteStudyPlanItem(id: number): Promise<void> {
+    await db.delete(studyPlanItems).where(eq(studyPlanItems.id, id));
+  }
+  
+  // Study plan generator
+  async generateStudyPlan(userId: number, options: StudyPlanGenerationOptions): Promise<StudyPlan> {
+    // Step 1: Analyze user progress to identify weak areas
+    const focusAreas: FocusAreaWithDetails[] = [];
+    
+    if (options.generateFromUserProgress) {
+      const userProgress = await this.getUserProgress(userId);
+      const allTopics = await this.getAllTopics();
+      
+      // For each topic, calculate proficiency
+      for (const topic of allTopics) {
+        // Skip excluded topics if specified
+        if (options.excludedTopics?.includes(topic.id)) {
+          continue;
+        }
+        
+        // Only include specified topics if includedTopics is provided
+        if (options.includedTopics && !options.includedTopics.includes(topic.id)) {
+          continue;
+        }
+        
+        const progress = userProgress.find(p => p.topicId === topic.id);
+        
+        // Calculate proficiency as percentage of correct answers
+        let proficiency = 0;
+        if (progress && progress.questionsAttempted > 0) {
+          proficiency = Math.round((progress.questionsCorrect / progress.questionsAttempted) * 100);
+        }
+        
+        // Determine priority based on proficiency
+        // Lower proficiency = higher priority
+        let priority = 2; // Default to medium priority
+        if (proficiency < 40) {
+          priority = 3; // High priority for very weak areas
+        } else if (proficiency > 75) {
+          priority = 1; // Low priority for strong areas
+        }
+        
+        focusAreas.push({
+          topicId: topic.id,
+          proficiency,
+          priority,
+          topicName: topic.name
+        });
+      }
+      
+      // Sort by priority (descending) and then by proficiency (ascending)
+      focusAreas.sort((a, b) => {
+        if (a.priority !== b.priority) {
+          return b.priority - a.priority;
+        }
+        return a.proficiency - b.proficiency;
+      });
+    }
+    
+    // If manually specified focus areas, add or update them
+    if (options.focusAreas && options.focusAreas.length > 0) {
+      const topicMap = new Map(focusAreas.map(area => [area.topicId, area]));
+      
+      for (const area of options.focusAreas) {
+        const topic = await this.getTopic(area.topicId);
+        if (!topic) continue;
+        
+        if (topicMap.has(area.topicId)) {
+          // Update existing focus area with manual settings
+          const existingArea = topicMap.get(area.topicId)!;
+          existingArea.priority = area.priority;
+          existingArea.proficiency = area.proficiency;
+        } else {
+          // Add new focus area
+          focusAreas.push({
+            topicId: area.topicId,
+            proficiency: area.proficiency,
+            priority: area.priority,
+            topicName: topic.name
+          });
+        }
+      }
+    }
+    
+    // Step 2: Create the study plan
+    const planName = options.name || `CFA Level I Study Plan (${new Date().toLocaleDateString()})`;
+    const newPlan = await this.createStudyPlan({
+      userId,
+      name: planName,
+      startDate: options.startDate,
+      endDate: options.endDate,
+      focusAreas: focusAreas as any, // Type casting to handle the JSON storage
+      status: "active",
+      progress: 0
+    });
+    
+    // Step 3: Generate study plan items based on focus areas
+    // Calculate total days in the plan
+    const startDate = new Date(options.startDate);
+    const endDate = new Date(options.endDate);
+    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Create an array of dates for the study plan
+    const studyDates: Date[] = [];
+    for (let i = 0; i < daysDiff; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      studyDates.push(date);
+    }
+    
+    // Daily study time in minutes (default to 60 if not specified)
+    const dailyStudyTime = options.dailyStudyTime || 60;
+    
+    // Weight the distribution of study time based on priority
+    const totalWeight = focusAreas.reduce((sum, area) => sum + area.priority, 0);
+    
+    for (const area of focusAreas) {
+      // Get practice sets for this topic
+      const topicPracticeSets = await this.getPracticeSets(area.topicId);
+      
+      // Skip if no practice sets available
+      if (topicPracticeSets.length === 0) continue;
+      
+      // Calculate how many days to dedicate to this topic
+      // Higher priority topics get more days
+      const daysForTopic = Math.max(1, Math.round((area.priority / totalWeight) * daysDiff));
+      
+      // Calculate available dates for this topic
+      // Distribute throughout the study period rather than clustering
+      const datesPerTopic: Date[] = [];
+      const stride = Math.max(1, Math.floor(daysDiff / daysForTopic));
+      for (let i = 0; i < daysForTopic; i++) {
+        const index = Math.min(i * stride, studyDates.length - 1);
+        datesPerTopic.push(studyDates[index]);
+      }
+      
+      // Create study plan items for this topic
+      for (let i = 0; i < datesPerTopic.length; i++) {
+        const practiceSet = topicPracticeSets[i % topicPracticeSets.length];
+        
+        await this.createStudyPlanItem({
+          planId: newPlan.id,
+          topicId: area.topicId,
+          practiceSetId: practiceSet.id,
+          title: `Study ${area.topicName}`,
+          description: `Practice set: ${practiceSet.name}`,
+          scheduledDate: datesPerTopic[i],
+          estimatedDuration: dailyStudyTime,
+          status: "pending",
+          completed: false,
+          priority: area.priority
+        });
+      }
+    }
+    
+    // Return the created study plan
+    return newPlan;
   }
   
   // Helper methods
