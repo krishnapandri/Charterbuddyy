@@ -1,5 +1,5 @@
 import { AdminLayout } from "@/components/layout/admin-layout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,7 +56,8 @@ import {
 import { 
   InsertQuestion, 
   Question, 
-  Topic 
+  Topic,
+  Chapter
 } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -87,8 +88,10 @@ export default function QuestionsManagement() {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
   const [formData, setFormData] = useState<Partial<InsertQuestion>>({
     topicId: 0,
+    chapterId: null,
     questionText: "",
     optionA: "",
     optionB: "",
@@ -111,6 +114,24 @@ export default function QuestionsManagement() {
     queryKey: ["/api/questions/all"],
     refetchOnWindowFocus: false,
   });
+  
+  // Fetch chapters when topic changes
+  const { data: chapterData } = useQuery<Chapter[]>({
+    queryKey: ["/api/chapters/topic", formData.topicId],
+    queryFn: async () => {
+      if (!formData.topicId) return [];
+      const res = await apiRequest("GET", `/api/chapters/topic/${formData.topicId}`);
+      return await res.json();
+    },
+    enabled: !!formData.topicId,
+  });
+  
+  // Update chapters when chapterData changes
+  useEffect(() => {
+    if (chapterData) {
+      setChapters(chapterData);
+    }
+  }, [chapterData]);
 
   const filteredQuestions = selectedTopicId
     ? questions?.filter((q) => q.topicId === selectedTopicId)
@@ -190,6 +211,7 @@ export default function QuestionsManagement() {
   const resetForm = () => {
     setFormData({
       topicId: 0,
+      chapterId: null,
       questionText: "",
       optionA: "",
       optionB: "",
@@ -212,10 +234,24 @@ export default function QuestionsManagement() {
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ 
-      ...prev, 
-      [name]: name === "topicId" || name === "difficulty" ? parseInt(value) : value 
-    }));
+    // Reset chapter selection when topic changes
+    if (name === 'topicId') {
+      setFormData((prev) => ({ 
+        ...prev, 
+        [name]: parseInt(value),
+        chapterId: null 
+      }));
+    } else if (name === 'chapterId') {
+      setFormData((prev) => ({ 
+        ...prev, 
+        [name]: value ? parseInt(value) : null 
+      }));
+    } else {
+      setFormData((prev) => ({ 
+        ...prev, 
+        [name]: name === "difficulty" ? parseInt(value) : value 
+      }));
+    }
   };
 
   const handleAddSubmit = (e: React.FormEvent) => {
@@ -231,10 +267,23 @@ export default function QuestionsManagement() {
     createQuestionMutation.mutate(formData as InsertQuestion);
   };
 
-  const handleEditClick = (question: Question) => {
+  const handleEditClick = async (question: Question) => {
     setSelectedQuestion(question);
+    
+    // Fetch chapters for the topic to populate the dropdown
+    if (question.topicId) {
+      try {
+        const res = await apiRequest("GET", `/api/chapters/topic/${question.topicId}`);
+        const topicChapters = await res.json();
+        setChapters(topicChapters || []);
+      } catch (error) {
+        console.error("Failed to load chapters:", error);
+      }
+    }
+    
     setFormData({
       topicId: question.topicId,
+      chapterId: question.chapterId,
       questionText: question.questionText,
       optionA: question.optionA,
       optionB: question.optionB,
@@ -246,6 +295,7 @@ export default function QuestionsManagement() {
       subtopic: question.subtopic || "",
       context: question.context || "",
     });
+    
     setIsEditDialogOpen(true);
   };
 
@@ -290,23 +340,46 @@ export default function QuestionsManagement() {
 
   const questionForm = (
     <div className="grid gap-4 py-4">
-      <div className="grid gap-2">
-        <Label htmlFor="topicId">Topic</Label>
-        <Select
-          value={formData.topicId?.toString() || ""}
-          onValueChange={(value) => handleSelectChange("topicId", value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select a topic" />
-          </SelectTrigger>
-          <SelectContent>
-            {topics?.map((topic) => (
-              <SelectItem key={topic.id} value={topic.id.toString()}>
-                {topic.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid gap-2">
+          <Label htmlFor="topicId">Topic</Label>
+          <Select
+            value={formData.topicId?.toString() || ""}
+            onValueChange={(value) => handleSelectChange("topicId", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a topic" />
+            </SelectTrigger>
+            <SelectContent>
+              {topics?.map((topic) => (
+                <SelectItem key={topic.id} value={topic.id.toString()}>
+                  {topic.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="grid gap-2">
+          <Label htmlFor="chapterId">Chapter (Optional)</Label>
+          <Select
+            value={formData.chapterId?.toString() || ""}
+            onValueChange={(value) => handleSelectChange("chapterId", value)}
+            disabled={!formData.topicId || chapters.length === 0}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={!formData.topicId ? "Select a topic first" : chapters.length === 0 ? "No chapters available" : "Select a chapter"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">None</SelectItem>
+              {chapters.map((chapter) => (
+                <SelectItem key={chapter.id} value={chapter.id.toString()}>
+                  {chapter.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       
       <div className="grid gap-2">
@@ -315,7 +388,7 @@ export default function QuestionsManagement() {
           id="subtopic"
           name="subtopic"
           placeholder="e.g., Time Value of Money"
-          value={formData.subtopic}
+          value={formData.subtopic || ""}
           onChange={handleFormChange}
         />
       </div>
