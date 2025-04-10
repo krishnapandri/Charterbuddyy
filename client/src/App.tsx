@@ -7,8 +7,6 @@ import Dashboard from "@/pages/dashboard";
 import Practice from "@/pages/practice";
 import Analytics from "@/pages/analytics";
 import ManageQuestions from "@/pages/manage-questions";
-import StudyPlans from "@/pages/study-plans";
-import StudyPlanPage from "@/pages/study-plan";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -27,8 +25,6 @@ function Router() {
       <ProtectedRoute path="/practice/:topicId" component={Practice} />
       <ProtectedRoute path="/analytics" component={Analytics} />
       <ProtectedRoute path="/manage-questions" component={ManageQuestions} />
-      <ProtectedRoute path="/study-plans" component={StudyPlans} />
-      <ProtectedRoute path="/study-plan/:id" component={StudyPlanPage} />
       
       {/* Admin routes */}
       <AdminRoute path="/admin" component={AdminDashboard} />
