@@ -302,8 +302,8 @@ export default function StudyPlanPage() {
               <div className="space-y-2 mt-4">
                 <h3 className="text-lg font-semibold">Focus Areas</h3>
                 <div className="flex flex-wrap gap-2">
-                  {studyPlan.focusAreas &&
-                    (studyPlan.focusAreas as any[]).map((area: any, index: number) => (
+                  {studyPlan.focusAreas && Array.isArray(studyPlan.focusAreas) &&
+                    (studyPlan.focusAreas as {topicName: string, priority: number}[]).map((area, index) => (
                       <div
                         key={index}
                         className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-muted"

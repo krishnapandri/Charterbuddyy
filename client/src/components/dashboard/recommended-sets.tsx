@@ -73,9 +73,9 @@ export function RecommendedSets({ sets }: RecommendedSetsProps) {
                 <p className="text-sm text-neutral-400 mt-1">{set.questions} questions • ~{set.duration} min</p>
               </div>
               <Link href={`/practice/${set.topicId}?set=${set.id}`}>
-                <a className="mt-1 text-primary hover:text-primary-dark">
+                <div className="mt-1 text-primary hover:text-primary-dark cursor-pointer">
                   <Play />
-                </a>
+                </div>
               </Link>
             </div>
           </Card>

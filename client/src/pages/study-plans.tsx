@@ -414,7 +414,7 @@ export default function StudyPlans() {
                   <div className="pt-2">
                     <h4 className="text-sm font-semibold mb-1">Focus Areas:</h4>
                     <div className="flex flex-wrap gap-1">
-                      {plan.focusAreas && (plan.focusAreas as any[]).map((area: any, index: number) => (
+                      {plan.focusAreas && Array.isArray(plan.focusAreas) && (plan.focusAreas as {topicName: string}[]).map((area, index) => (
                         <div
                           key={index}
                           className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-muted"
