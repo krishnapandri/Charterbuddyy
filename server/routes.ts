@@ -377,6 +377,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // GET /api/chapters/all - Get all chapters
+  app.get("/api/chapters/all", async (req, res) => {
+    try {
+      // First fetch all topics
+      const topics = await storage.getAllTopics();
+      const allChapters = [];
+      
+      // Then get chapters for each topic
+      for (const topic of topics) {
+        const topicChapters = await storage.getChaptersByTopic(topic.id);
+        
+        // Add topic data to each chapter for client-side convenience
+        const chaptersWithTopic = topicChapters.map(chapter => ({
+          ...chapter,
+          topic: {
+            id: topic.id,
+            name: topic.name,
+            description: topic.description,
+            icon: topic.icon
+          }
+        }));
+        
+        allChapters.push(...chaptersWithTopic);
+      }
+      
+      res.json(allChapters);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching all chapters" });
+    }
+  });
+  
   // GET /api/chapters/topic/:topicId - Get chapters for a topic
   app.get("/api/chapters/topic/:topicId", async (req, res) => {
     try {

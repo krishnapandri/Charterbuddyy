@@ -33,6 +33,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navItems = [
     { path: '/admin', label: 'Dashboard', icon: <Layout className="h-5 w-5 mr-2" /> },
     { path: '/admin/topics', label: 'Topics', icon: <BookOpen className="h-5 w-5 mr-2" /> },
+    { path: '/admin/chapters', label: 'Chapters', icon: <FileText className="h-5 w-5 mr-2" /> },
     { path: '/admin/questions', label: 'Questions', icon: <HelpCircle className="h-5 w-5 mr-2" /> },
     { path: '/admin/practice-sets', label: 'Practice Sets', icon: <Layers className="h-5 w-5 mr-2" /> },
     { path: '/admin/users', label: 'Users', icon: <User className="h-5 w-5 mr-2" /> },

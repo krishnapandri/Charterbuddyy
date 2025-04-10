@@ -16,6 +16,7 @@ import AdminTopics from "@/pages/admin/topics";
 import AdminQuestions from "@/pages/admin/questions";
 import AdminPracticeSets from "@/pages/admin/practice-sets";
 import AdminUsers from "@/pages/admin/users";
+import AdminChapters from "@/pages/admin/chapters";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       {/* Admin routes */}
       <AdminRoute path="/admin" component={AdminDashboard} />
       <AdminRoute path="/admin/topics" component={AdminTopics} />
+      <AdminRoute path="/admin/chapters" component={AdminChapters} />
       <AdminRoute path="/admin/questions" component={AdminQuestions} />
       <AdminRoute path="/admin/practice-sets" component={AdminPracticeSets} />
       <AdminRoute path="/admin/users" component={AdminUsers} />
