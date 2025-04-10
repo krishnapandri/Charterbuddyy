@@ -111,6 +111,8 @@ export class MemStorage implements IStorage {
   private userProgress: Map<number, UserProgress>;
   private userActivity: Map<number, UserActivity>;
   private practiceSets: Map<number, PracticeSet>;
+  private studyPlans: Map<number, StudyPlan>;
+  private studyPlanItems: Map<number, StudyPlanItem>;
   
   private userIdCounter: number;
   private topicIdCounter: number;
@@ -119,6 +121,8 @@ export class MemStorage implements IStorage {
   private userProgressIdCounter: number;
   private userActivityIdCounter: number;
   private practiceSetIdCounter: number;
+  private studyPlanIdCounter: number;
+  private studyPlanItemIdCounter: number;
   
   // Session store for authentication
   public sessionStore: session.Store;
@@ -1013,8 +1017,8 @@ export class DatabaseStorage implements IStorage {
     const newPlan = await this.createStudyPlan({
       userId,
       name: planName,
-      startDate: options.startDate,
-      endDate: options.endDate,
+      startDate: options.startDate instanceof Date ? options.startDate.toISOString() : options.startDate,
+      endDate: options.endDate instanceof Date ? options.endDate.toISOString() : options.endDate,
       focusAreas: focusAreas as any, // Type casting to handle the JSON storage
       status: "active",
       progress: 0
@@ -1070,7 +1074,7 @@ export class DatabaseStorage implements IStorage {
           practiceSetId: practiceSet.id,
           title: `Study ${area.topicName}`,
           description: `Practice set: ${practiceSet.name}`,
-          scheduledDate: datesPerTopic[i],
+          scheduledDate: datesPerTopic[i].toISOString().split('T')[0],
           estimatedDuration: dailyStudyTime,
           status: "pending",
           completed: false,
