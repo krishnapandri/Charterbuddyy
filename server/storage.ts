@@ -141,6 +141,8 @@ export class MemStorage implements IStorage {
     this.userProgress = new Map();
     this.userActivity = new Map();
     this.practiceSets = new Map();
+    this.studyPlans = new Map();
+    this.studyPlanItems = new Map();
     
     this.userIdCounter = 1;
     this.topicIdCounter = 1;
@@ -149,6 +151,8 @@ export class MemStorage implements IStorage {
     this.userProgressIdCounter = 1;
     this.userActivityIdCounter = 1;
     this.practiceSetIdCounter = 1;
+    this.studyPlanIdCounter = 1;
+    this.studyPlanItemIdCounter = 1;
     
     // Initialize with sample data
     this.initializeData();
@@ -388,6 +392,237 @@ export class MemStorage implements IStorage {
   
   async deletePracticeSet(id: number): Promise<void> {
     this.practiceSets.delete(id);
+  }
+  
+  // Study plan operations
+  async getStudyPlans(userId: number): Promise<StudyPlan[]> {
+    return Array.from(this.studyPlans.values()).filter(
+      (plan) => plan.userId === userId
+    );
+  }
+  
+  async getStudyPlan(id: number): Promise<StudyPlan | undefined> {
+    return this.studyPlans.get(id);
+  }
+  
+  async createStudyPlan(insertStudyPlan: InsertStudyPlan): Promise<StudyPlan> {
+    const id = this.studyPlanIdCounter++;
+    const studyPlan: StudyPlan = { ...insertStudyPlan, id };
+    this.studyPlans.set(id, studyPlan);
+    return studyPlan;
+  }
+  
+  async updateStudyPlan(id: number, studyPlanData: Partial<StudyPlan>): Promise<StudyPlan> {
+    const studyPlan = await this.getStudyPlan(id);
+    if (!studyPlan) {
+      throw new Error(`Study plan with id ${id} not found`);
+    }
+    
+    const updatedStudyPlan = { ...studyPlan, ...studyPlanData };
+    this.studyPlans.set(id, updatedStudyPlan);
+    return updatedStudyPlan;
+  }
+  
+  async deleteStudyPlan(id: number): Promise<void> {
+    // Delete all associated study plan items first
+    const itemsToDelete = Array.from(this.studyPlanItems.values())
+      .filter(item => item.planId === id);
+      
+    for (const item of itemsToDelete) {
+      await this.deleteStudyPlanItem(item.id);
+    }
+    
+    // Then delete the plan itself
+    this.studyPlans.delete(id);
+  }
+  
+  // Study plan item operations
+  async getStudyPlanItems(planId: number): Promise<StudyPlanItem[]> {
+    return Array.from(this.studyPlanItems.values()).filter(
+      (item) => item.planId === planId
+    );
+  }
+  
+  async getStudyPlanItem(id: number): Promise<StudyPlanItem | undefined> {
+    return this.studyPlanItems.get(id);
+  }
+  
+  async createStudyPlanItem(insertStudyPlanItem: InsertStudyPlanItem): Promise<StudyPlanItem> {
+    const id = this.studyPlanItemIdCounter++;
+    const studyPlanItem: StudyPlanItem = { ...insertStudyPlanItem, id };
+    this.studyPlanItems.set(id, studyPlanItem);
+    return studyPlanItem;
+  }
+  
+  async updateStudyPlanItem(id: number, studyPlanItemData: Partial<StudyPlanItem>): Promise<StudyPlanItem> {
+    const studyPlanItem = await this.getStudyPlanItem(id);
+    if (!studyPlanItem) {
+      throw new Error(`Study plan item with id ${id} not found`);
+    }
+    
+    const updatedStudyPlanItem = { ...studyPlanItem, ...studyPlanItemData };
+    this.studyPlanItems.set(id, updatedStudyPlanItem);
+    return updatedStudyPlanItem;
+  }
+  
+  async deleteStudyPlanItem(id: number): Promise<void> {
+    this.studyPlanItems.delete(id);
+  }
+  
+  // Study plan generator
+  async generateStudyPlan(userId: number, options: StudyPlanGenerationOptions): Promise<StudyPlan> {
+    // Step 1: Analyze user progress to identify weak areas if needed
+    let focusAreas: FocusAreaWithDetails[] = [];
+    
+    if (options.generateFromUserProgress) {
+      // Get user progress data for all topics
+      const userProgress = await this.getUserProgress(userId);
+      
+      // Get all topics
+      const allTopics = await this.getAllTopics();
+      
+      // Calculate proficiency for each topic
+      focusAreas = allTopics
+        .map(topic => {
+          const progress = userProgress.find(p => p.topicId === topic.id);
+          
+          // If user has no progress in this topic, consider it a high priority weak area
+          if (!progress) {
+            return {
+              topicId: topic.id,
+              topicName: topic.name,
+              proficiency: 0,
+              priority: 3 // High priority
+            };
+          }
+          
+          // Calculate proficiency (0-100%)
+          const proficiency = progress.questionsAttempted > 0
+            ? Math.floor((progress.questionsCorrect / progress.questionsAttempted) * 100)
+            : 0;
+            
+          // Determine priority based on proficiency
+          let priority = 1; // Low priority
+          if (proficiency < 60) {
+            priority = 3; // High priority
+          } else if (proficiency < 80) {
+            priority = 2; // Medium priority
+          }
+          
+          return {
+            topicId: topic.id,
+            topicName: topic.name,
+            proficiency,
+            priority
+          };
+        })
+        // Filter out topics with high proficiency unless explicitly included
+        .filter(area => {
+          if (options.includedTopics && options.includedTopics.includes(area.topicId)) {
+            return true;
+          }
+          if (options.excludedTopics && options.excludedTopics.includes(area.topicId)) {
+            return false;
+          }
+          return area.priority > 1; // Only include medium/high priority areas
+        })
+        // Sort by priority (highest first)
+        .sort((a, b) => b.priority - a.priority);
+    } else if (options.focusAreas && options.focusAreas.length > 0) {
+      // Use provided focus areas
+      for (const area of options.focusAreas) {
+        const topic = await this.getTopic(area.topicId);
+        if (topic) {
+          focusAreas.push({
+            ...area,
+            topicName: topic.name
+          });
+        }
+      }
+    } else {
+      // No focus areas specified, use all topics with equal priority
+      const allTopics = await this.getAllTopics();
+      focusAreas = allTopics.map(topic => ({
+        topicId: topic.id,
+        topicName: topic.name,
+        proficiency: 50, // Default middle proficiency
+        priority: 2 // Medium priority
+      }));
+    }
+    
+    // Step 2: Create the study plan
+    const planName = options.name || `CFA Level I Study Plan (${new Date().toLocaleDateString()})`;
+    const newPlan = await this.createStudyPlan({
+      userId,
+      name: planName,
+      startDate: options.startDate instanceof Date ? options.startDate.toISOString() : options.startDate,
+      endDate: options.endDate instanceof Date ? options.endDate.toISOString() : options.endDate,
+      focusAreas: focusAreas as any, // Type casting to handle the JSON storage
+      status: "active",
+      progress: 0
+    });
+    
+    // Step 3: Generate study plan items based on focus areas
+    // Calculate total days in the plan
+    const startDate = new Date(options.startDate);
+    const endDate = new Date(options.endDate);
+    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Create an array of dates for the study plan
+    const studyDates: Date[] = [];
+    for (let i = 0; i < daysDiff; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      studyDates.push(date);
+    }
+    
+    // Daily study time in minutes (default to 60 if not specified)
+    const dailyStudyTime = options.dailyStudyTime || 60;
+    
+    // Weight the distribution of study time based on priority
+    const totalWeight = focusAreas.reduce((sum, area) => sum + area.priority, 0);
+    
+    for (const area of focusAreas) {
+      // Get practice sets for this topic
+      const topicPracticeSets = await this.getPracticeSets(area.topicId);
+      
+      // Skip if no practice sets available
+      if (topicPracticeSets.length === 0) continue;
+      
+      // Calculate how many days to dedicate to this topic
+      // Higher priority topics get more days
+      const daysForTopic = Math.max(1, Math.round((area.priority / totalWeight) * daysDiff));
+      
+      // Calculate available dates for this topic
+      // Distribute throughout the study period rather than clustering
+      const datesPerTopic: Date[] = [];
+      const stride = Math.max(1, Math.floor(daysDiff / daysForTopic));
+      for (let i = 0; i < daysForTopic; i++) {
+        const index = Math.min(i * stride, studyDates.length - 1);
+        datesPerTopic.push(studyDates[index]);
+      }
+      
+      // Create study plan items for this topic
+      for (let i = 0; i < datesPerTopic.length; i++) {
+        const practiceSet = topicPracticeSets[i % topicPracticeSets.length];
+        
+        await this.createStudyPlanItem({
+          planId: newPlan.id,
+          topicId: area.topicId,
+          practiceSetId: practiceSet.id,
+          title: `Study ${area.topicName}`,
+          description: `Practice set: ${practiceSet.name}`,
+          scheduledDate: datesPerTopic[i].toISOString().split('T')[0],
+          estimatedDuration: dailyStudyTime,
+          status: "pending",
+          completed: false,
+          priority: area.priority
+        });
+      }
+    }
+    
+    // Return the created study plan
+    return newPlan;
   }
   
   // Helper methods
