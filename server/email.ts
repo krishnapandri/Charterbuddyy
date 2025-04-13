@@ -14,8 +14,8 @@ export type EmailOptions = {
  * Send an email (logs to console for development)
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
-  // Default sender email
-  const from = 'noreply@cfapracticehub.com';
+  // Set default sender email from environment variable or use a placeholder for development
+  const from = process.env.EMAIL_FROM || 'noreply@example.com';
   
   try {
     // Log the email content instead of sending
@@ -39,19 +39,24 @@ export async function sendPasswordResetEmail(
   email: string, 
   resetCode: string
 ): Promise<boolean> {
-  const subject = 'CFA Practice Hub - Password Reset';
+  // App name from environment variable with fallback
+  const appName = process.env.APP_NAME || 'CFA Practice Hub';
+  
+  const subject = `${appName} - Password Reset`;
   const text = `
 Hello,
 
-You recently requested to reset your password for your CFA Practice Hub account.
+You recently requested to reset your password for your ${appName} account.
 
 Your reset code is: ${resetCode}
 
 This code will expire in 1 hour. If you did not request a password reset, please ignore this email.
 
 Thank you,
-CFA Practice Hub Team
+${appName} Team
   `;
+  
+  const primaryColor = process.env.EMAIL_PRIMARY_COLOR || '#4f46e5'; // Default to indigo
   
   const html = `
 <!DOCTYPE html>
@@ -62,7 +67,7 @@ CFA Practice Hub Team
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background-color: #4f46e5; color: white; padding: 20px; text-align: center; }
+    .header { background-color: ${primaryColor}; color: white; padding: 20px; text-align: center; }
     .content { padding: 20px; border: 1px solid #ddd; border-top: none; }
     .code { background-color: #f5f5f5; padding: 10px; font-size: 20px; font-weight: bold; text-align: center; letter-spacing: 5px; margin: 20px 0; }
     .footer { font-size: 12px; color: #777; margin-top: 30px; text-align: center; }
@@ -75,11 +80,11 @@ CFA Practice Hub Team
     </div>
     <div class="content">
       <p>Hello,</p>
-      <p>You recently requested to reset your password for your CFA Practice Hub account.</p>
+      <p>You recently requested to reset your password for your ${appName} account.</p>
       <p>Your reset code is:</p>
       <div class="code">${resetCode}</div>
       <p>This code will expire in 1 hour. If you did not request a password reset, please ignore this email.</p>
-      <p>Thank you,<br>CFA Practice Hub Team</p>
+      <p>Thank you,<br>${appName} Team</p>
     </div>
     <div class="footer">
       <p>This is an automated message, please do not reply to this email.</p>

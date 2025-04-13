@@ -100,7 +100,7 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
             <div className="px-4 py-3 bg-neutral-100">
               <div className="flex items-center">
                 <Avatar>
-                  <AvatarImage src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=48&h=48&q=80" alt={user.username} />
+                  <AvatarImage src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=random`} alt={user.username} />
                   <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="ml-3">

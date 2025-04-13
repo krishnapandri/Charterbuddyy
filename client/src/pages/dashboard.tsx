@@ -29,19 +29,22 @@ export default function Dashboard() {
 
   // Fetch analytics data
   const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
-    queryKey: ['/api/analytics/1'], // Hardcoded user ID for demo
+    queryKey: ['/api/analytics', userData?.id],
+    enabled: !!userData?.id,
     retry: false,
   });
 
   // Fetch recommended practice sets
   const { data: recommendedSets, isLoading: setsLoading } = useQuery({
-    queryKey: ['/api/practice-sets/recommended/1'], // Hardcoded user ID for demo
+    queryKey: ['/api/practice-sets/recommended', userData?.id],
+    enabled: !!userData?.id,
     retry: false,
   });
 
   // Fetch recent activity
   const { data: activityData, isLoading: activityLoading } = useQuery({
-    queryKey: ['/api/activity/1'], // Hardcoded user ID for demo
+    queryKey: ['/api/activity', userData?.id],
+    enabled: !!userData?.id,
     retry: false,
   });
 
@@ -151,8 +154,8 @@ export default function Dashboard() {
                 <button className="flex items-center text-sm text-neutral-800 focus:outline-none">
                   <span className="hidden md:block mr-2">{userData?.username}</span>
                   <Avatar>
-                    <AvatarImage src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=32&h=32&q=80" alt={userData?.username} />
-                    <AvatarFallback>{userData?.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                    <AvatarImage src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userData?.username || 'U')}&background=random`} alt={userData?.username} />
+                    <AvatarFallback>{userData?.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                   </Avatar>
                 </button>
               </div>
@@ -187,12 +190,12 @@ export default function Dashboard() {
             overallProgress={{
               percentage: analyticsData?.summary?.accuracy || 0,
               completed: analyticsData?.summary?.totalQuestions || 0,
-              total: 610, // Total available questions
+              total: analyticsData?.summary?.totalAvailableQuestions || 0,
             }}
             streakDays={userData?.streakDays || 0}
             averageScore={{
               percentage: analyticsData?.summary?.accuracy || 0,
-              change: 3, // Hardcoded for demo
+              change: analyticsData?.summary?.change || 0
             }}
           />
 
