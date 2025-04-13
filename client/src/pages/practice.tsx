@@ -251,10 +251,11 @@ export default function Practice() {
           </div>
 
           {/* Question Card or No Questions Message */}
-          <div className="max-w-4xl mx-auto">
+          <div className="mx-auto">
             {currentQuestion ? (
               <div className="bg-white rounded-lg shadow-md overflow-hidden">
                 <QuestionCard
+                  key={`question-${currentQuestion.id}`}
                   question={currentQuestion}
                   questionNumber={currentQuestionIndex + 1}
                   totalQuestions={questions.length}
