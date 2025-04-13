@@ -30,8 +30,9 @@ export default function Analytics() {
 
   // Fetch analytics data
   const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
-    queryKey: ['/api/analytics/1'], // Hardcoded user ID for demo
+    queryKey: ['/api/analytics', userData?.id],
     retry: false,
+    enabled: !!userData?.id, // Only fetch when user is authenticated
   });
 
   if (userLoading || topicsLoading || analyticsLoading) {
