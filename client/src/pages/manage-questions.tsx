@@ -19,6 +19,7 @@ import { z } from 'zod';
 // Extended schema with validation
 const questionFormSchema = insertQuestionSchema.extend({
   topicId: z.coerce.number().min(1, 'Please select a topic'),
+  chapterId: z.coerce.number().min(1, 'Please select a chapter'),
   questionText: z.string().min(10, 'Question must be at least 10 characters'),
   optionA: z.string().min(1, 'Option A is required'),
   optionB: z.string().min(1, 'Option B is required'),
@@ -44,10 +45,16 @@ export default function ManageQuestions() {
     queryKey: ['/api/topics'],
   });
   
+  // Fetch chapters
+  const { data: chaptersData, isLoading: chaptersLoading } = useQuery({
+    queryKey: ['/api/chapters'],
+  });
+  
   const form = useForm<QuestionFormValues>({
     resolver: zodResolver(questionFormSchema),
     defaultValues: {
       topicId: 0,
+      chapterId: 0,
       subtopic: '',
       questionText: '',
       context: '',
@@ -60,6 +67,20 @@ export default function ManageQuestions() {
       difficulty: 1,
     },
   });
+  
+  // State to store filtered chapters based on selected topic
+  const [filteredChapters, setFilteredChapters] = useState<any[]>([]);
+  
+  // Update chapters when topic changes
+  const handleTopicChange = (topicId: number) => {
+    form.setValue('topicId', topicId);
+    form.setValue('chapterId', 0); // Reset chapter selection
+    
+    if (chaptersData) {
+      const filtered = chaptersData.filter((chapter: any) => chapter.topicId === topicId);
+      setFilteredChapters(filtered);
+    }
+  };
 
   const createQuestionMutation = useMutation({
     mutationFn: (data: QuestionFormValues) => 
@@ -90,7 +111,7 @@ export default function ManageQuestions() {
     setLocation('/');
   };
 
-  if (userLoading || topicsLoading) {
+  if (userLoading || topicsLoading || chaptersLoading) {
     return <div className="p-8">Loading...</div>;
   }
 
@@ -119,6 +140,14 @@ export default function ManageQuestions() {
               </button>
               <h1 className="text-xl font-bold text-neutral-800">Manage Questions</h1>
             </div>
+            <div>
+              <Button
+                variant="outline"
+                onClick={() => setLocation('/manage-chapters')}
+              >
+                Manage Chapters
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -135,9 +164,9 @@ export default function ManageQuestions() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Topic Selection */}
                   <div className="space-y-2">
-                    <Label htmlFor="topicId">Chapter *</Label>
+                    <Label htmlFor="topicId">Topic *</Label>
                     <Select 
-                      onValueChange={(value) => form.setValue('topicId', parseInt(value))}
+                      onValueChange={(value) => handleTopicChange(parseInt(value))}
                       defaultValue={form.getValues('topicId').toString()}
                     >
                       <SelectTrigger>
@@ -156,9 +185,38 @@ export default function ManageQuestions() {
                     )}
                   </div>
 
+                  {/* Chapter Selection */}
+                  <div className="space-y-2">
+                    <Label htmlFor="chapterId">Chapter *</Label>
+                    <Select 
+                      onValueChange={(value) => form.setValue('chapterId', parseInt(value))}
+                      defaultValue={form.getValues('chapterId').toString()}
+                      disabled={!form.getValues('topicId')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a chapter" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredChapters.map((chapter: any) => (
+                          <SelectItem key={chapter.id} value={chapter.id.toString()}>
+                            {chapter.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.chapterId && (
+                      <p className="text-sm text-red-500">{form.formState.errors.chapterId.message}</p>
+                    )}
+                    {filteredChapters.length === 0 && form.getValues('topicId') > 0 && (
+                      <p className="text-sm text-amber-500">
+                        No chapters found for this topic. Please <a href="/manage-chapters" className="text-primary underline">add some chapters</a> first.
+                      </p>
+                    )}
+                  </div>
+
                   {/* Subtopic */}
                   <div className="space-y-2">
-                    <Label htmlFor="subtopic">Topic</Label>
+                    <Label htmlFor="subtopic">Subtopic (Optional)</Label>
                     <Input 
                       id="subtopic" 
                       {...form.register('subtopic')}

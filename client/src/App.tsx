@@ -7,6 +7,7 @@ import Dashboard from "@/pages/dashboard";
 import Practice from "@/pages/practice";
 import Analytics from "@/pages/analytics";
 import ManageQuestions from "@/pages/manage-questions";
+import ManageChapters from "@/pages/manage-chapters";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
