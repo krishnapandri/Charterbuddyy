@@ -7,6 +7,7 @@ import { insertUserSchema } from '@shared/schema';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { ForgotPasswordDialog } from '@/components/forgot-password-dialog';
 
 import {
   Card,
@@ -215,6 +216,9 @@ export default function AuthPage() {
                   >
                     Register here
                   </Button>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <ForgotPasswordDialog />
                 </div>
               </CardFooter>
             </Card>
