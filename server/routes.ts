@@ -68,8 +68,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(topic);
   });
 
-  // GET /api/questions/topic/:topicId - Get questions by topic
-  app.get("/api/questions/topic/:topicId", async (req, res) => {
+  // GET /api/topic-questions/:topicId - Get questions by topic
+  app.get("/api/topic-questions/:topicId", async (req, res) => {
     const topicId = parseInt(req.params.topicId);
     const questions = await storage.getQuestionsByTopic(topicId);
     res.json(questions);

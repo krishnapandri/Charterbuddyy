@@ -34,7 +34,7 @@ export default function Practice() {
 
   // Fetch questions for the topic
   const { data: questionsData, isLoading: questionsLoading } = useQuery({
-    queryKey: topicId ? ['/api/questions/topic', topicId] : [''],
+    queryKey: topicId ? ['/api/topic-questions', topicId] : [''],
     enabled: !!topicId,
   });
   
