@@ -147,7 +147,7 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
               {/* Topics list */}
               <div className="mt-6">
                 <div className="px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                  Topics
+                  Chapters
                 </div>
                 <div className="mt-1">
                   {topics.map((topic) => (

@@ -169,13 +169,16 @@ export default function Dashboard() {
               <p className="text-neutral-400">Continue your {userData?.level} preparation journey.</p>
             </div>
             <div className="mt-4 md:mt-0 flex space-x-2">
-              {userData?.role !== 'admin' && <AdminLoginDialog />}
-              <Link href="/manage-questions">
-                <Button className="flex items-center">
-                  <PlusCircle className="mr-2 h-5 w-5" />
-                  Add Questions
-                </Button>
-              </Link>
+              {/* {userData?.role !== 'admin' && <AdminLoginDialog />} */}
+              {
+                userData?.role && <Link href="/manage-questions">
+                                    <Button className="flex items-center">
+                                      <PlusCircle className="mr-2 h-5 w-5" />
+                                      Add Questions
+                                    </Button>
+                                  </Link>
+              }
+              
             </div>
           </div>
 

@@ -64,7 +64,7 @@ export function QuestionCard({
         <CardContent className="pt-6">
           <div className="mb-6">
             {question.subtopic && (
-              <Badge variant="topic" className="mb-3">
+              <Badge variant="topic" style={{color:'white'}} className="mb-3">
                 {question.subtopic}
               </Badge>
             )}
