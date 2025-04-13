@@ -134,13 +134,23 @@ export default function AuthPage() {
   });
 
   // Handle login form submission
-  function onLoginSubmit(values: LoginFormValues) {
-    loginMutation.mutate(values);
+  async function onLoginSubmit(values: LoginFormValues) {
+    try {
+      await loginMutation.mutateAsync(values);
+    } catch (error) {
+      // Error is already handled in the onError callback
+      console.error("Login error:", error);
+    }
   }
 
   // Handle registration form submission
-  function onRegisterSubmit(values: RegisterFormValues) {
-    registerMutation.mutate(values);
+  async function onRegisterSubmit(values: RegisterFormValues) {
+    try {
+      await registerMutation.mutateAsync(values);
+    } catch (error) {
+      // Error is already handled in the onError callback
+      console.error("Registration error:", error);
+    }
   }
 
   return (
