@@ -19,6 +19,7 @@ import AdminQuestions from "@/pages/admin/questions";
 import AdminPracticeSets from "@/pages/admin/practice-sets";
 import AdminUsers from "@/pages/admin/users";
 import AdminChapters from "@/pages/admin/chapters";
+import StudentAnalytics from "@/pages/admin/student-analytics";
 
 function Router() {
   return (
@@ -39,6 +40,7 @@ function Router() {
       <AdminRoute path="/admin/questions" component={AdminQuestions} />
       <AdminRoute path="/admin/practice-sets" component={AdminPracticeSets} />
       <AdminRoute path="/admin/users" component={AdminUsers} />
+      <AdminRoute path="/admin/student-analytics" component={StudentAnalytics} />
       
       {/* Public routes */}
       <Route path="/auth" component={AuthPage} />

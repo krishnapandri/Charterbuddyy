@@ -9,7 +9,9 @@ import {
   User,
   BookText,
   Layers,
-  FileText
+  FileText,
+  BarChart,
+  Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -37,6 +39,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { path: '/admin/questions', label: 'Questions', icon: <HelpCircle className="h-5 w-5 mr-2" /> },
     { path: '/admin/practice-sets', label: 'Practice Sets', icon: <Layers className="h-5 w-5 mr-2" /> },
     { path: '/admin/users', label: 'Users', icon: <User className="h-5 w-5 mr-2" /> },
+    { path: '/admin/student-analytics', label: 'Student Analytics', icon: <BarChart className="h-5 w-5 mr-2" /> },
   ];
 
   return (
