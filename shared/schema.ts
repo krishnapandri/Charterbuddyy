@@ -8,15 +8,19 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  email: text("email"),
   level: text("level").notNull().default("Level I Candidate"),
   role: text("role").notNull().default("student"), // 'admin' or 'student'
   streakDays: integer("streak_days").notNull().default(0),
   lastLoginDate: timestamp("last_login_date").notNull().default(new Date()),
+  resetPasswordToken: text("reset_password_token"),
+  resetPasswordExpires: timestamp("reset_password_expires"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  email: true,
   level: true,
   role: true,
 });
