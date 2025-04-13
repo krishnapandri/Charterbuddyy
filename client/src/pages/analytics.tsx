@@ -70,6 +70,7 @@ export default function Analytics() {
         user={{
           username: userData?.username || 'User',
           level: userData?.level || 'CFA Candidate',
+          role: userData?.role || 'student',
         }}
       />
 

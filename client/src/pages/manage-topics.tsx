@@ -158,6 +158,7 @@ export default function ManageTopics() {
         user={{
           username: userData?.username || 'User',
           level: userData?.level || 'CFA Candidate',
+          role: 'admin', // Force admin role since this is an admin-only page
         }}
       />
 

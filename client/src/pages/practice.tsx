@@ -158,6 +158,7 @@ export default function Practice() {
         user={{
           username: userData?.username || 'User',
           level: userData?.level || 'CFA Candidate',
+          role: userData?.role || 'student',
         }}
         activeTopic={topicId || undefined}
       />
