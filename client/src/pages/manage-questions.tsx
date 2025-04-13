@@ -135,7 +135,7 @@ export default function ManageQuestions() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Topic Selection */}
                   <div className="space-y-2">
-                    <Label htmlFor="topicId">Topic *</Label>
+                    <Label htmlFor="topicId">Chapter *</Label>
                     <Select 
                       onValueChange={(value) => form.setValue('topicId', parseInt(value))}
                       defaultValue={form.getValues('topicId').toString()}
@@ -158,7 +158,7 @@ export default function ManageQuestions() {
 
                   {/* Subtopic */}
                   <div className="space-y-2">
-                    <Label htmlFor="subtopic">Subtopic</Label>
+                    <Label htmlFor="subtopic">Topic</Label>
                     <Input 
                       id="subtopic" 
                       {...form.register('subtopic')}

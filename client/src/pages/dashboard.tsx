@@ -174,7 +174,7 @@ export default function Dashboard() {
             <div className="mt-4 md:mt-0 flex space-x-2">
               {/* {userData?.role !== 'admin' && <AdminLoginDialog />} */}
               {
-                userData?.role && <Link href="/manage-questions">
+                userData?.role === 'admin' && <Link href="/manage-questions">
                                     <Button className="flex items-center">
                                       <PlusCircle className="mr-2 h-5 w-5" />
                                       Add Questions
