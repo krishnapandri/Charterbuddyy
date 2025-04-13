@@ -29,7 +29,21 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    // Handle array query keys like ['/api/analytics', userId]
+    const baseUrl = queryKey[0] as string;
+    const params = queryKey.slice(1);
+    
+    // Build the URL with params if they exist
+    let url = baseUrl;
+    if (params.length > 0 && baseUrl.includes(':id')) {
+      // Replace :id placeholder with actual id
+      url = baseUrl.replace(':id', params[0] as string);
+    } else if (params.length > 0) {
+      // Append the params to the URL
+      url = `${baseUrl}/${params.join('/')}`;
+    }
+    
+    const res = await fetch(url, {
       credentials: "include",
     });
 

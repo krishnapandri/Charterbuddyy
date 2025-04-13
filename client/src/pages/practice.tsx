@@ -82,6 +82,8 @@ export default function Practice() {
       // Invalidate relevant queries to refetch data
       if (userData?.id) {
         queryClient.invalidateQueries({ queryKey: ['/api/progress', userData.id] });
+        queryClient.invalidateQueries({ queryKey: ['/api/analytics', userData.id] });
+        queryClient.invalidateQueries({ queryKey: ['/api/activity', userData.id] });
       }
     },
   });
