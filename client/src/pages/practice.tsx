@@ -20,6 +20,7 @@ export default function Practice() {
   const [timer, setTimer] = useState<number>(0);
   const [startTime, setStartTime] = useState<number>(Date.now());
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
+  const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
 
   // Fetch user data first
   const { data: userData, isLoading: userLoading } = useQuery({
@@ -129,9 +130,24 @@ export default function Practice() {
   const handleSubmitAnswer = (answer: string, isCorrect: boolean, timeSpent: number) => {
     if (!topicId || !userData?.id) return;
     
+    const currentQuestionId = questions[currentQuestionIndex].id;
+    
+    // Check if this question has already been answered in this session
+    if (answeredQuestions.has(currentQuestionId)) {
+      console.log("Question already answered in this session, skipping submission");
+      return;
+    }
+    
+    // Add this question to the set of answered questions
+    setAnsweredQuestions(prev => {
+      const newSet = new Set(prev);
+      newSet.add(currentQuestionId);
+      return newSet;
+    });
+    
     answerMutation.mutate({
       userId: userData.id,
-      questionId: questions[currentQuestionIndex].id,
+      questionId: currentQuestionId,
       userOption: answer,
       isCorrect,
       timeSpent
