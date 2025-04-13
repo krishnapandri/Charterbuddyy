@@ -28,13 +28,13 @@ export default function Practice() {
 
   // Fetch topic data
   const { data: topicData, isLoading: topicLoading } = useQuery({
-    queryKey: topicId ? [`/api/topics/${topicId}`] : null,
+    queryKey: topicId ? ['/api/topics', topicId] : [''],
     enabled: !!topicId,
   });
 
   // Fetch questions for the topic
   const { data: questionsData, isLoading: questionsLoading } = useQuery({
-    queryKey: topicId ? [`/api/questions/topic/${topicId}`] : null,
+    queryKey: topicId ? ['/api/questions/topic', topicId] : [''],
     enabled: !!topicId,
   });
 

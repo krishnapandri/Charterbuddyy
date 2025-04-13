@@ -154,8 +154,8 @@ export default function Dashboard() {
                 <button className="flex items-center text-sm text-neutral-800 focus:outline-none">
                   <span className="hidden md:block mr-2">{userData?.username}</span>
                   <Avatar>
-                    <AvatarImage src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=32&h=32&q=80" alt={userData?.username} />
-                    <AvatarFallback>{userData?.username?.charAt(0).toUpperCase()}</AvatarFallback>
+                    <AvatarImage src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userData?.username || 'U')}&background=random`} alt={userData?.username} />
+                    <AvatarFallback>{userData?.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                   </Avatar>
                 </button>
               </div>
