@@ -140,7 +140,13 @@ export default function ManageQuestions() {
               </button>
               <h1 className="text-xl font-bold text-neutral-800">Manage Questions</h1>
             </div>
-            <div>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setLocation('/manage-topics')}
+              >
+                Manage Topics
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => setLocation('/manage-chapters')}

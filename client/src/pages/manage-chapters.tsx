@@ -195,7 +195,13 @@ export default function ManageChapters() {
               </button>
               <h1 className="text-xl font-bold text-neutral-800">Manage Chapters</h1>
             </div>
-            <div>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setLocation('/manage-topics')}
+              >
+                Manage Topics
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => setLocation('/manage-questions')}
