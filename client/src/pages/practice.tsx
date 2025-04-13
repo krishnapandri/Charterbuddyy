@@ -37,6 +37,13 @@ export default function Practice() {
     queryKey: topicId ? ['/api/questions/topic', topicId] : [''],
     enabled: !!topicId,
   });
+  
+  // Log when questions data changes
+  useEffect(() => {
+    if (questionsData) {
+      console.log("Successfully fetched questions for topic:", topicId, "Data:", questionsData);
+    }
+  }, [questionsData, topicId]);
 
   // Fetch all topics for the sidebar
   const { data: topicsData, isLoading: topicsLoading } = useQuery({
@@ -74,13 +81,16 @@ export default function Practice() {
 
   // Initialize practice session when questions are loaded
   useEffect(() => {
+    console.log("Questions data:", questionsData, "Topic ID:", topicId);
     if (questionsData && questionsData.length > 0) {
       // Take a subset of questions for the practice session
       setQuestions(questionsData.slice(0, 10));
       setCurrentQuestionIndex(0);
       startTimer();
+    } else if (questionsData && questionsData.length === 0) {
+      console.log("No questions found for topic ID:", topicId);
     }
-  }, [questionsData]);
+  }, [questionsData, topicId]);
 
   // Timer functions
   const startTimer = () => {
@@ -204,8 +214,8 @@ export default function Practice() {
           {/* Progress Bar */}
           <Progress value={progress} className="w-full h-2 mb-8" />
 
-          {/* Question Card */}
-          {currentQuestion && (
+          {/* Question Card or No Questions Message */}
+          {currentQuestion ? (
             <QuestionCard
               question={currentQuestion}
               questionNumber={currentQuestionIndex + 1}
@@ -214,6 +224,20 @@ export default function Practice() {
               onNext={handleNextQuestion}
               startTime={startTime}
             />
+          ) : (
+            <div className="bg-white shadow-lg rounded-lg p-8 text-center">
+              <h3 className="text-xl font-bold text-neutral-800 mb-4">No Questions Available</h3>
+              <p className="text-neutral-600 mb-6">
+                There are currently no practice questions available for this topic. 
+                Please check back later or select another topic.
+              </p>
+              <button 
+                onClick={handleBackToDashboard}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+              >
+                Return to Dashboard
+              </button>
+            </div>
           )}
         </div>
       </div>
