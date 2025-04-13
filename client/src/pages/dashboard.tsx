@@ -187,7 +187,7 @@ export default function Dashboard() {
             overallProgress={{
               percentage: analyticsData?.summary?.accuracy || 0,
               completed: analyticsData?.summary?.totalQuestions || 0,
-              total: 610, // Total available questions
+              total: analyticsData?.summary?.totalAvailableQuestions || 0,
             }}
             streakDays={userData?.streakDays || 0}
             averageScore={{

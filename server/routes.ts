@@ -620,6 +620,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Get recent activity
     const recentActivity = await storage.getUserActivity(userId, 5);
     
+    // Get total available questions count
+    let totalAvailableQuestions = 0;
+    for (const topic of topics) {
+      const questions = await storage.getQuestionsByTopic(topic.id);
+      totalAvailableQuestions += questions.length;
+    }
+
     // Create analytics response
     const analytics = {
       user: {
@@ -630,9 +637,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       },
       summary: {
         totalQuestions: totalAttempted,
+        totalAvailableQuestions: totalAvailableQuestions,
         accuracy: overallAccuracy,
         totalTimeSpent: Math.round(totalTimeSpent / 3600), // Convert to hours
-        avgTimePerQuestion
+        avgTimePerQuestion,
+        change: 0 // Default value, should be calculated from historical data
       },
       topicPerformance,
       recentActivity
@@ -753,5 +762,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
-import { setupAuth, hashPassword } from "./auth";
-import { sendPasswordResetEmail } from "./email";
