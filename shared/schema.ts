@@ -266,3 +266,34 @@ export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
 
 export type PracticeSet = typeof practiceSets.$inferSelect;
 export type InsertPracticeSet = z.infer<typeof insertPracticeSetSchema>;
+
+// Error Logs Table
+export const errorLogs = pgTable("error_logs", {
+  id: serial("id").primaryKey(),
+  errorMessage: text("error_message").notNull(),
+  errorStack: text("error_stack"),
+  userId: integer("user_id"),
+  metadata: json("metadata"),
+  route: text("route"),
+  method: text("method"),
+  timestamp: timestamp("timestamp").notNull().default(new Date()),
+});
+
+export const insertErrorLogSchema = createInsertSchema(errorLogs).pick({
+  errorMessage: true,
+  errorStack: true,
+  userId: true,
+  metadata: true,
+  route: true,
+  method: true,
+});
+
+export const errorLogsRelations = relations(errorLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [errorLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export type ErrorLog = typeof errorLogs.$inferSelect;
+export type InsertErrorLog = z.infer<typeof insertErrorLogSchema>;

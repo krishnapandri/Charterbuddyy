@@ -7,6 +7,7 @@ import {
   userProgress,
   userActivity,
   practiceSets,
+  errorLogs,
   type User,
   type InsertUser,
   type Topic,
@@ -22,7 +23,9 @@ import {
   type UserActivity,
   type InsertUserActivity,
   type PracticeSet,
-  type InsertPracticeSet
+  type InsertPracticeSet,
+  type ErrorLog,
+  type InsertErrorLog
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
