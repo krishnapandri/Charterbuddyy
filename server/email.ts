@@ -1,14 +1,7 @@
-import { MailService } from '@sendgrid/mail';
-import { MailDataRequired } from '@sendgrid/mail';
-
-const mailService = new MailService();
-
-// Check if SENDGRID_API_KEY is set
-if (process.env.SENDGRID_API_KEY) {
-  mailService.setApiKey(process.env.SENDGRID_API_KEY);
-} else {
-  console.warn('SENDGRID_API_KEY not set. Emails will be logged instead of sent.');
-}
+/**
+ * Development-focused email service that logs emails to the console
+ * instead of actually sending them.
+ */
 
 export type EmailOptions = {
   to: string;
@@ -18,36 +11,20 @@ export type EmailOptions = {
 };
 
 /**
- * Send an email using SendGrid
- * If SENDGRID_API_KEY is not set, it will log the email content instead
+ * Send an email (logs to console for development)
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   // Default sender email
   const from = 'noreply@cfapracticehub.com';
   
   try {
-    // If SendGrid API key is not set, just log the email content (for development)
-    if (!process.env.SENDGRID_API_KEY) {
-      console.log('SENDGRID_API_KEY not set. Email would have been sent with the following:');
-      console.log(`From: ${from}`);
-      console.log(`To: ${options.to}`);
-      console.log(`Subject: ${options.subject}`);
-      console.log(`Content: ${options.text || options.html}`);
-      return true;
-    }
-    
-    // Prepare the mail data
-    const msg: MailDataRequired = {
-      to: options.to,
-      from: from,
-      subject: options.subject,
-      ...(options.text ? { text: options.text } : {}),
-      ...(options.html ? { html: options.html } : {})
-    };
-    
-    // Send email using SendGrid
-    await mailService.send(msg);
-    
+    // Log the email content instead of sending
+    console.log('----- Email would have been sent -----');
+    console.log(`From: ${from}`);
+    console.log(`To: ${options.to}`);
+    console.log(`Subject: ${options.subject}`);
+    console.log(`Content: ${options.text || options.html}`);
+    console.log('-------------------------------------');
     return true;
   } catch (error) {
     console.error('Error sending email:', error);
