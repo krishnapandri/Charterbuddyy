@@ -24,7 +24,7 @@ export function AdminRoute({
   if (!user || user.role !== 'admin') {
     return (
       <Route path={path}>
-        <Redirect to="/dashboard" />
+        <Redirect to="/" />
       </Route>
     );
   }

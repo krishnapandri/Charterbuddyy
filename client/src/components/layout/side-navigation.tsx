@@ -18,6 +18,7 @@ type User = {
   username: string;
   level: string;
   avatar?: string;
+  role?: string;
 };
 
 type SideNavigationProps = {
@@ -144,47 +145,49 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
                 </div>
               </div>
               
-              {/* Management Section */}
-              <div className="mt-6">
-                <div className="px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                  Management
+              {/* Management Section - Only visible to admin users */}
+              {user.role === 'admin' && (
+                <div className="mt-6">
+                  <div className="px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                    Management
+                  </div>
+                  <div className="mt-1">
+                    <Link href="/manage-topics">
+                      <div className={cn(
+                        "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer",
+                        location === "/manage-topics" && "bg-neutral-100"
+                      )}>
+                        <div className="flex items-center">
+                          <FolderOpen className="h-5 w-5 text-neutral-400 mr-3" />
+                          Manage Topics
+                        </div>
+                      </div>
+                    </Link>
+                    <Link href="/manage-chapters">
+                      <div className={cn(
+                        "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer",
+                        location === "/manage-chapters" && "bg-neutral-100"
+                      )}>
+                        <div className="flex items-center">
+                          <Layers className="h-5 w-5 text-neutral-400 mr-3" />
+                          Manage Chapters
+                        </div>
+                      </div>
+                    </Link>
+                    <Link href="/manage-questions">
+                      <div className={cn(
+                        "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer",
+                        location === "/manage-questions" && "bg-neutral-100"
+                      )}>
+                        <div className="flex items-center">
+                          <FileText className="h-5 w-5 text-neutral-400 mr-3" />
+                          Manage Questions
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
                 </div>
-                <div className="mt-1">
-                  <Link href="/manage-topics">
-                    <div className={cn(
-                      "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer",
-                      location === "/manage-topics" && "bg-neutral-100"
-                    )}>
-                      <div className="flex items-center">
-                        <FolderOpen className="h-5 w-5 text-neutral-400 mr-3" />
-                        Manage Topics
-                      </div>
-                    </div>
-                  </Link>
-                  <Link href="/manage-chapters">
-                    <div className={cn(
-                      "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer",
-                      location === "/manage-chapters" && "bg-neutral-100"
-                    )}>
-                      <div className="flex items-center">
-                        <Layers className="h-5 w-5 text-neutral-400 mr-3" />
-                        Manage Chapters
-                      </div>
-                    </div>
-                  </Link>
-                  <Link href="/manage-questions">
-                    <div className={cn(
-                      "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer",
-                      location === "/manage-questions" && "bg-neutral-100"
-                    )}>
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 text-neutral-400 mr-3" />
-                        Manage Questions
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              </div>
+              )}
 
               {/* Topics list */}
               <div className="mt-6">

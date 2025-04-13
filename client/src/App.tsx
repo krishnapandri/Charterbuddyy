@@ -27,9 +27,10 @@ function Router() {
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/practice/:topicId" component={Practice} />
       <ProtectedRoute path="/analytics" component={Analytics} />
-      <ProtectedRoute path="/manage-questions" component={ManageQuestions} />
-      <ProtectedRoute path="/manage-chapters" component={ManageChapters} />
-      <ProtectedRoute path="/manage-topics" component={ManageTopics} />
+      {/* Management routes for admin users only */}
+      <AdminRoute path="/manage-questions" component={ManageQuestions} />
+      <AdminRoute path="/manage-chapters" component={ManageChapters} />
+      <AdminRoute path="/manage-topics" component={ManageTopics} />
       
       {/* Admin routes */}
       <AdminRoute path="/admin" component={AdminDashboard} />
