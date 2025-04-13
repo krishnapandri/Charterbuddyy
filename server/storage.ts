@@ -151,7 +151,24 @@ export class MemStorage implements IStorage {
   
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
-    const user: User = { ...insertUser, id, streakDays: 0, lastLoginDate: new Date() };
+    
+    // Set default values for required fields if not provided
+    const user: User = { 
+      ...insertUser, 
+      id, 
+      streakDays: 0, 
+      lastLoginDate: new Date(),
+      // Default role to student if not specified
+      role: insertUser.role || 'student',
+      // Default level if not specified
+      level: insertUser.level || 'Level I Candidate',
+      // Empty reset token fields
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+      // Email might be null but schema requires the property to exist
+      email: insertUser.email || null
+    };
+    
     this.users.set(id, user);
     return user;
   }
@@ -452,165 +469,8 @@ export class MemStorage implements IStorage {
     });
   }
   
-  private initializeData(): void {
-    // Add sample user
-    const user: User = {
-      id: this.userIdCounter++,
-      username: 'alex',
-      password: 'password123',
-      level: 'Level I Candidate',
-      streakDays: 15,
-      lastLoginDate: new Date()
-    };
-    this.users.set(user.id, user);
-    
-    // Add sample topics - CFA Level 1 specific
-    const topicData: InsertTopic[] = [
-      { name: 'Ethics & Professional Standards', description: 'Code of Ethics, Standards of Practice, and GIPS', icon: 'book' },
-      { name: 'Quantitative Methods', description: 'Time value of money, probability, and statistics', icon: 'book' },
-      { name: 'Economics', description: 'Microeconomics, macroeconomics, and international trade', icon: 'book' },
-      { name: 'Financial Statement Analysis', description: 'Balance sheet, income statement, and ratio analysis', icon: 'book' },
-      { name: 'Corporate Finance', description: 'Capital budgeting, cost of capital, and working capital management', icon: 'book' },
-      { name: 'Equity Investments', description: 'Market organization, indices, and stock valuation', icon: 'book' },
-      { name: 'Fixed Income', description: 'Bond valuation, risk, and term structure', icon: 'book' },
-      { name: 'Derivatives', description: 'Forwards, futures, options, and swaps', icon: 'book' },
-      { name: 'Alternative Investments', description: 'Real estate, private equity, hedge funds, and commodities', icon: 'book' },
-      { name: 'Portfolio Management', description: 'Risk management, asset allocation, and performance evaluation', icon: 'book' }
-    ];
-    
-    const topics: Topic[] = topicData.map(t => {
-      const topic: Topic = { ...t, id: this.topicIdCounter++ };
-      this.topics.set(topic.id, topic);
-      return topic;
-    });
-    
-    // Add sample questions for Ethics topic
-    const ethicsQuestions: InsertQuestion[] = [
-      {
-        topicId: topics[0].id,
-        subtopic: 'Code of Ethics',
-        questionText: 'According to the CFA Institute Code of Ethics, which of the following best describes the duty of a CFA charterholder when facing a potential conflict of interest?',
-        context: 'A CFA charterholder is employed by an investment firm and also serves on the board of a local charity. The charterholder is responsible for managing the charity\'s investment portfolio. What action should the charterholder take?',
-        optionA: 'Decline to manage the charity\'s portfolio, as the conflict cannot be adequately addressed.',
-        optionB: 'Disclose the conflict to both parties and obtain written consent before proceeding with managing the investments.',
-        optionC: 'Manage the investments but avoid charging fees to the charity.',
-        optionD: 'Continue managing both portfolios but create a blind trust for the charity\'s investments.',
-        correctOption: 'B',
-        explanation: 'According to the CFA Institute Standard VI(A) on Disclosure of Conflicts, members must make full and fair disclosure of all matters that could reasonably be expected to impair their independence and objectivity or interfere with their duties to clients. In this case, the charterholder has obligations to both the investment firm and the charity. The proper course of action is to disclose the conflict to both parties and obtain their consent before managing the charity\'s investments.',
-        difficulty: 2
-      },
-      {
-        topicId: topics[0].id,
-        subtopic: 'Standards of Practice',
-        questionText: 'Which of the following actions would most likely violate the CFA Institute Standards of Professional Conduct?',
-        context: 'A portfolio manager at an investment firm is considering various actions.',
-        optionA: 'Using the firm\'s research reports to make personal investment decisions after the information has been disseminated to clients',
-        optionB: 'Accepting a small gift from a client during the holiday season',
-        optionC: 'Stating in marketing materials that the firm\'s investment strategy has outperformed the S&P 500 for the past 5 years without providing appropriate disclosures about the methodology',
-        optionD: 'Informing clients that the firm uses a proprietary investment model',
-        correctOption: 'C',
-        explanation: 'Standard III(D) - Performance Presentation requires that members make reasonable efforts to ensure that performance information is fair, accurate, and complete. Stating that the firm\'s strategy has outperformed the S&P 500 without providing appropriate disclosures about the methodology violates this standard. Without proper disclosures about how returns were calculated, whether they are net of fees, and other relevant information, clients may be misled about the actual performance of the investment strategy.',
-        difficulty: 1
-      }
-    ];
-    
-    for (const q of ethicsQuestions) {
-      const question: Question = { ...q, id: this.questionIdCounter++ };
-      this.questions.set(question.id, question);
-    }
-    
-    // Add sample user progress data
-    const progressData: InsertUserProgress[] = [
-      { userId: user.id, topicId: topics[0].id, questionsAttempted: 150, questionsCorrect: 127, totalTimeSpent: 9750 },
-      { userId: user.id, topicId: topics[1].id, questionsAttempted: 85, questionsCorrect: 53, totalTimeSpent: 6970 },
-      { userId: user.id, topicId: topics[2].id, questionsAttempted: 65, questionsCorrect: 26, totalTimeSpent: 6175 }
-    ];
-    
-    for (const p of progressData) {
-      const progress: UserProgress = { ...p, id: this.userProgressIdCounter++, lastUpdated: new Date() };
-      this.userProgress.set(progress.id, progress);
-    }
-    
-    // Add sample user activity
-    const activityData: InsertUserActivity[] = [
-      { 
-        userId: user.id, 
-        activityType: 'practice_completed', 
-        topicId: topics[0].id, 
-        details: { score: 85, questions: 10 } 
-      },
-      { 
-        userId: user.id, 
-        activityType: 'practice_completed', 
-        topicId: topics[1].id, 
-        details: { score: 67, questions: 10 } 
-      },
-      { 
-        userId: user.id, 
-        activityType: 'badge_earned', 
-        topicId: topics[2].id, 
-        details: { badge: 'FSA Explorer' } 
-      },
-      { 
-        userId: user.id, 
-        activityType: 'practice_completed', 
-        topicId: topics[2].id, 
-        details: { score: 45, questions: 10 } 
-      }
-    ];
-    
-    // Add with different dates to create history
-    const now = new Date();
-    const dayInMs = 24 * 60 * 60 * 1000;
-    
-    activityData.forEach((a, i) => {
-      const activity: UserActivity = { 
-        ...a, 
-        id: this.userActivityIdCounter++, 
-        activityDate: new Date(now.getTime() - (i * dayInMs)) 
-      };
-      this.userActivity.set(activity.id, activity);
-    });
-    
-    // Add sample practice sets
-    const practiceSetsData: InsertPracticeSet[] = [
-      {
-        name: 'Code of Ethics Advanced',
-        topicId: topics[0].id,
-        subtopic: 'Code of Ethics',
-        questionCount: 15,
-        estimatedTime: 20,
-        difficulty: 2,
-        isRecommended: true,
-        status: 'new'
-      },
-      {
-        name: 'FSA Basics',
-        topicId: topics[2].id,
-        subtopic: 'Financial Reporting',
-        questionCount: 10,
-        estimatedTime: 15,
-        difficulty: 1,
-        isRecommended: true,
-        status: 'needs_review'
-      },
-      {
-        name: 'Economics: Business Cycles',
-        topicId: topics[1].id,
-        subtopic: 'Macroeconomics',
-        questionCount: 12,
-        estimatedTime: 18,
-        difficulty: 2,
-        isRecommended: true,
-        status: 'new'
-      }
-    ];
-    
-    for (const ps of practiceSetsData) {
-      const practiceSet: PracticeSet = { ...ps, id: this.practiceSetIdCounter++ };
-      this.practiceSets.set(practiceSet.id, practiceSet);
-    }
-  }
+  // No hardcoded initialization of data
+  // Data will be created through the API by users
 }
 
 // Database storage implementation
@@ -641,11 +501,20 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values({
+    // Set default values for required fields
+    const userData = {
       ...insertUser,
       streakDays: 0,
-      lastLoginDate: new Date()
-    }).returning();
+      lastLoginDate: new Date(),
+      // Default role to student if not specified
+      role: insertUser.role || 'student',
+      // Default level if not specified
+      level: insertUser.level || 'Level I Candidate',
+      // Empty reset token fields are handled by the schema defaults
+      email: insertUser.email || null
+    };
+    
+    const [user] = await db.insert(users).values(userData).returning();
     return user;
   }
   
