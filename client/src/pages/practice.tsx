@@ -176,12 +176,41 @@ export default function Practice() {
     setLocation('/');
   };
 
+  // Redirect admin users away from practice page
+  useEffect(() => {
+    if (userData && userData.role === 'admin') {
+      setLocation('/');
+    }
+  }, [userData, setLocation]);
+
   if (topicLoading || questionsLoading || topicsLoading || chaptersLoading || !topicData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
           <p className="mt-4 text-lg text-neutral-600">Loading practice session...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Prevent admin users from practicing
+  if (userData && userData.role === 'admin') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center text-center max-w-md">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-neutral-800 mb-4">Admin Access Restricted</h2>
+          <p className="text-neutral-600 mb-6">
+            As an administrator, you cannot participate in practice sessions. 
+            Please use the admin dashboard to manage content and view student analytics.
+          </p>
+          <button 
+            onClick={handleBackToDashboard}
+            className="px-6 py-3 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            Return to Dashboard
+          </button>
         </div>
       </div>
     );

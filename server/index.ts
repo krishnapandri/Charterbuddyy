@@ -1,7 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import {seedDatabase} from '../scripts/seed-db'
+import { seedDatabase } from '../scripts/seed-db';
+import { storage } from "./storage";
+import { logErrorToDatabase } from "./error-logger";
 // Set a default session secret if not provided in environment variables
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'cfaprep-secret-key-development';
 //await (async ()=>seedDatabase())();
@@ -42,12 +44,17 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  // Error logging middleware
+  app.use(async (err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
+    
+    // Only log server errors (status >= 500)
+    if (status >= 500) {
+      await logErrorToDatabase(err, req);
+    }
 
     res.status(status).json({ message });
-    throw err;
   });
 
   // importantly only setup vite in development and after
