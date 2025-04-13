@@ -4,8 +4,9 @@ import { useRoute, useLocation } from 'wouter';
 import { SideNavigation } from '@/components/layout/side-navigation';
 import { QuestionCard, Question } from '@/components/practice/question-card';
 import { Progress } from '@/components/ui/progress';
-import { ChevronLeft, Timer } from 'lucide-react';
+import { ChevronLeft, Timer, BookOpen } from 'lucide-react';
 import { queryClient, apiRequest } from '@/lib/queryClient';
+import { cn } from '@/lib/utils';
 
 export default function Practice() {
   // Get topicId from URL parameter
@@ -35,6 +36,12 @@ export default function Practice() {
   // Fetch questions for the topic
   const { data: questionsData, isLoading: questionsLoading } = useQuery({
     queryKey: topicId ? ['/api/topic-questions', topicId] : [''],
+    enabled: !!topicId,
+  });
+  
+  // Fetch chapters for the topic
+  const { data: chaptersData, isLoading: chaptersLoading } = useQuery({
+    queryKey: topicId ? ['/api/chapters/topic', topicId] : [''],
     enabled: !!topicId,
   });
   
@@ -151,8 +158,15 @@ export default function Practice() {
     setLocation('/');
   };
 
-  if (topicLoading || questionsLoading || topicsLoading || !topicData) {
-    return <div className="p-8">Loading...</div>;
+  if (topicLoading || questionsLoading || topicsLoading || chaptersLoading || !topicData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-lg text-neutral-600">Loading practice session...</p>
+        </div>
+      </div>
+    );
   }
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -188,57 +202,86 @@ export default function Practice() {
         {/* Practice Content */}
         <div className="p-6">
           {/* Practice Header */}
-          <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="flex items-center">
-                <button 
-                  onClick={handleBackToDashboard}
-                  className="mr-3 text-neutral-400 hover:text-neutral-800"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </button>
-                <h2 className="text-2xl font-bold text-neutral-800">{topicData.name}</h2>
+          <div className="mb-8 bg-white p-6 rounded-lg shadow-md">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+              <div>
+                <div className="flex items-center">
+                  <button 
+                    onClick={handleBackToDashboard}
+                    className="mr-3 text-neutral-400 hover:text-neutral-800 transition-colors"
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                  </button>
+                  <div>
+                    <h2 className="text-2xl font-bold text-neutral-800 flex items-center">
+                      {topicData?.name || 'Topic'}
+                      <span className="ml-2 text-primary">
+                        <BookOpen className="h-5 w-5" />
+                      </span>
+                    </h2>
+                    <div className="flex items-center mt-1">
+                      <p className="text-neutral-500">
+                        Question {currentQuestionIndex + 1} of {questions.length}
+                      </p>
+                      {currentQuestion && chaptersData && chaptersData.length > 0 && (
+                        <div className="ml-4 flex items-center">
+                          <span className="inline-block w-2 h-2 rounded-full bg-primary mr-2"></span>
+                          <span className="text-neutral-500">
+                            Chapter: {
+                              chaptersData.find((c: any) => c.id === (currentQuestion as any).chapterId)?.name || 'General'
+                            }
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <p className="text-neutral-400 mt-1">
-                Practice Session - Question {currentQuestionIndex + 1} of {questions.length}
-              </p>
-            </div>
-            <div className="flex items-center mt-4 md:mt-0">
-              <div className="bg-white rounded-full px-4 py-2 shadow-sm flex items-center">
-                <Timer className="h-5 w-5 text-[#FFC107] mr-2" />
-                <span className="text-sm font-medium">{formatTime(timer)}</span>
+              <div className="flex items-center mt-4 md:mt-0">
+                <div className="bg-primary/10 rounded-full px-4 py-2 shadow-sm flex items-center">
+                  <Timer className="h-5 w-5 text-primary mr-2" />
+                  <span className="text-sm font-medium text-primary">{formatTime(timer)}</span>
+                </div>
               </div>
             </div>
+            <Progress 
+              value={progress} 
+              className="h-3 mb-0"
+            />
           </div>
 
-          {/* Progress Bar */}
-          <Progress value={progress} className="w-full h-2 mb-8" />
-
           {/* Question Card or No Questions Message */}
-          {currentQuestion ? (
-            <QuestionCard
-              question={currentQuestion}
-              questionNumber={currentQuestionIndex + 1}
-              totalQuestions={questions.length}
-              onSubmit={handleSubmitAnswer}
-              onNext={handleNextQuestion}
-              startTime={startTime}
-            />
-          ) : (
-            <div className="bg-white shadow-lg rounded-lg p-8 text-center">
-              <h3 className="text-xl font-bold text-neutral-800 mb-4">No Questions Available</h3>
-              <p className="text-neutral-600 mb-6">
-                There are currently no practice questions available for this topic. 
-                Please check back later or select another topic.
-              </p>
-              <button 
-                onClick={handleBackToDashboard}
-                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
-              >
-                Return to Dashboard
-              </button>
-            </div>
-          )}
+          <div className="max-w-4xl mx-auto">
+            {currentQuestion ? (
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <QuestionCard
+                  question={currentQuestion}
+                  questionNumber={currentQuestionIndex + 1}
+                  totalQuestions={questions.length}
+                  onSubmit={handleSubmitAnswer}
+                  onNext={handleNextQuestion}
+                  startTime={startTime}
+                />
+              </div>
+            ) : (
+              <div className="bg-white shadow-lg rounded-lg p-8 text-center">
+                <div className="flex flex-col items-center">
+                  <BookOpen className="h-16 w-16 text-primary/40 mb-4" />
+                  <h3 className="text-xl font-bold text-neutral-800 mb-4">No Questions Available</h3>
+                  <p className="text-neutral-600 mb-6 max-w-md">
+                    There are currently no practice questions available for this topic. 
+                    Please check back later or select another topic.
+                  </p>
+                  <button 
+                    onClick={handleBackToDashboard}
+                    className="px-6 py-3 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors shadow-sm"
+                  >
+                    Return to Dashboard
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
