@@ -42,6 +42,9 @@ const loginFormSchema = z.object({
 
 // Extend the registration schema with password confirmation
 const registerFormSchema = insertUserSchema.extend({
+  email: z.string().email({
+    message: 'Please enter a valid email address.',
+  }),
   password: z.string().min(6, {
     message: 'Password must be at least 6 characters.',
   }),
@@ -74,9 +77,11 @@ export default function AuthPage() {
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
       username: '',
+      email: '',
       password: '',
       confirmPassword: '',
       level: 'Level I Candidate',
+      role: 'student',
     },
   });
 
@@ -247,6 +252,19 @@ export default function AuthPage() {
                           <FormLabel>Username</FormLabel>
                           <FormControl>
                             <Input placeholder="johndoe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="johndoe@example.com" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

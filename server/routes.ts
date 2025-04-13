@@ -12,7 +12,7 @@ import {
   insertChapterSchema
 } from "@shared/schema";
 import { z } from "zod";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -641,6 +641,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Study Plan routes and Generator are removed per user's request
+
+  // Password Reset Functionality
+  // POST /api/forgot-password
+  app.post("/api/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      // Generate a 6-digit reset code
+      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Set expiration 1 hour from now
+      const resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour
+      
+      // Find user by email
+      const users = await storage.getAllUsers();
+      const user = users.find(u => u.email === email);
+      
+      if (user) {
+        // Update user with reset token
+        await storage.updateUser(user.id, {
+          resetPasswordToken: resetCode,
+          resetPasswordExpires: resetTokenExpires
+        });
+        
+        // In a real application, you would send an email with the reset code
+        console.log(`Reset code for ${email}: ${resetCode}`);
+      }
+      
+      // Always return success to prevent user enumeration
+      res.status(200).json({ 
+        message: "If the email exists in our system, a reset code has been sent." 
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error processing request" });
+    }
+  });
+  
+  // POST /api/verify-reset-code
+  app.post("/api/verify-reset-code", async (req, res) => {
+    try {
+      const { email, resetCode } = req.body;
+      
+      if (!email || !resetCode) {
+        return res.status(400).json({ message: "Email and reset code are required" });
+      }
+      
+      // Find user by email
+      const users = await storage.getAllUsers();
+      const user = users.find(u => u.email === email);
+      
+      if (!user || 
+          user.resetPasswordToken !== resetCode || 
+          !user.resetPasswordExpires ||
+          user.resetPasswordExpires < new Date()) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+      
+      res.status(200).json({ message: "Reset code verified" });
+    } catch (error) {
+      res.status(500).json({ message: "Error verifying reset code" });
+    }
+  });
+  
+  // POST /api/reset-password
+  app.post("/api/reset-password", async (req, res) => {
+    try {
+      const { email, resetCode, newPassword } = req.body;
+      
+      if (!email || !resetCode || !newPassword) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+      
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+      
+      // Find user by email
+      const users = await storage.getAllUsers();
+      const user = users.find(u => u.email === email);
+      
+      if (!user || 
+          user.resetPasswordToken !== resetCode || 
+          !user.resetPasswordExpires ||
+          user.resetPasswordExpires < new Date()) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+      
+      // Hash the new password
+      const hashedPassword = await hashPassword(newPassword);
+      
+      // Update user
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null
+      });
+      
+      res.status(200).json({ message: "Password has been reset successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Error resetting password" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
