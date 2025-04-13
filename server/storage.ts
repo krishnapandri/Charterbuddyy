@@ -90,6 +90,11 @@ export interface IStorage {
   createPracticeSet(practiceSet: InsertPracticeSet): Promise<PracticeSet>;
   updatePracticeSet(id: number, practiceSetData: Partial<PracticeSet>): Promise<PracticeSet>;
   deletePracticeSet(id: number): Promise<void>;
+  
+  // Error logging operations
+  logError(errorLog: InsertErrorLog): Promise<ErrorLog>;
+  getErrorLogs(limit?: number): Promise<ErrorLog[]>;
+  getErrorLogsByUser(userId: number, limit?: number): Promise<ErrorLog[]>;
 }
 
 // In-memory storage implementation
@@ -102,6 +107,7 @@ export class MemStorage implements IStorage {
   private userProgress: Map<number, UserProgress>;
   private userActivity: Map<number, UserActivity>;
   private practiceSets: Map<number, PracticeSet>;
+  private errorLogs: Map<number, ErrorLog>;
   
   private userIdCounter: number;
   private topicIdCounter: number;
@@ -111,6 +117,7 @@ export class MemStorage implements IStorage {
   private userProgressIdCounter: number;
   private userActivityIdCounter: number;
   private practiceSetIdCounter: number;
+  private errorLogIdCounter: number;
   
   // Session store for authentication
   public sessionStore: session.Store;
@@ -130,6 +137,7 @@ export class MemStorage implements IStorage {
     this.userProgress = new Map();
     this.userActivity = new Map();
     this.practiceSets = new Map();
+    this.errorLogs = new Map();
     
     this.userIdCounter = 1;
     this.topicIdCounter = 1;
@@ -139,6 +147,7 @@ export class MemStorage implements IStorage {
     this.userProgressIdCounter = 1;
     this.userActivityIdCounter = 1;
     this.practiceSetIdCounter = 1;
+    this.errorLogIdCounter = 1;
   }
   
   // User operations
@@ -431,6 +440,33 @@ export class MemStorage implements IStorage {
   
   async deletePracticeSet(id: number): Promise<void> {
     this.practiceSets.delete(id);
+  }
+  
+  // Error logging operations
+  async logError(insertErrorLog: InsertErrorLog): Promise<ErrorLog> {
+    const id = this.errorLogIdCounter++;
+    const errorLog: ErrorLog = {
+      ...insertErrorLog,
+      id,
+      timestamp: new Date()
+    };
+    this.errorLogs.set(id, errorLog);
+    return errorLog;
+  }
+  
+  async getErrorLogs(limit: number = 50): Promise<ErrorLog[]> {
+    const logs = Array.from(this.errorLogs.values())
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    
+    return limit ? logs.slice(0, limit) : logs;
+  }
+  
+  async getErrorLogsByUser(userId: number, limit: number = 50): Promise<ErrorLog[]> {
+    const logs = Array.from(this.errorLogs.values())
+      .filter(log => log.userId === userId)
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    
+    return limit ? logs.slice(0, limit) : logs;
   }
   
   // Helper methods
@@ -795,6 +831,32 @@ export class DatabaseStorage implements IStorage {
   
   async deletePracticeSet(id: number): Promise<void> {
     await db.delete(practiceSets).where(eq(practiceSets.id, id));
+  }
+  
+  // Error logging operations
+  async logError(insertErrorLog: InsertErrorLog): Promise<ErrorLog> {
+    const [errorLog] = await db.insert(errorLogs)
+      .values({
+        ...insertErrorLog,
+        timestamp: new Date()
+      })
+      .returning();
+    return errorLog;
+  }
+  
+  async getErrorLogs(limit: number = 50): Promise<ErrorLog[]> {
+    return db.select()
+      .from(errorLogs)
+      .orderBy(desc(errorLogs.timestamp))
+      .limit(limit);
+  }
+  
+  async getErrorLogsByUser(userId: number, limit: number = 50): Promise<ErrorLog[]> {
+    return db.select()
+      .from(errorLogs)
+      .where(eq(errorLogs.userId, userId))
+      .orderBy(desc(errorLogs.timestamp))
+      .limit(limit);
   }
   
   // Study plan operations
