@@ -136,9 +136,6 @@ export class MemStorage implements IStorage {
     this.userProgressIdCounter = 1;
     this.userActivityIdCounter = 1;
     this.practiceSetIdCounter = 1;
-    
-    // Initialize with sample data
-    this.initializeData();
   }
   
   // User operations
