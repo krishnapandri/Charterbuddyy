@@ -29,19 +29,22 @@ export default function Dashboard() {
 
   // Fetch analytics data
   const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
-    queryKey: ['/api/analytics/1'], // Hardcoded user ID for demo
+    queryKey: ['/api/analytics', userData?.id],
+    enabled: !!userData?.id,
     retry: false,
   });
 
   // Fetch recommended practice sets
   const { data: recommendedSets, isLoading: setsLoading } = useQuery({
-    queryKey: ['/api/practice-sets/recommended/1'], // Hardcoded user ID for demo
+    queryKey: ['/api/practice-sets/recommended', userData?.id],
+    enabled: !!userData?.id,
     retry: false,
   });
 
   // Fetch recent activity
   const { data: activityData, isLoading: activityLoading } = useQuery({
-    queryKey: ['/api/activity/1'], // Hardcoded user ID for demo
+    queryKey: ['/api/activity', userData?.id],
+    enabled: !!userData?.id,
     retry: false,
   });
 
@@ -189,7 +192,7 @@ export default function Dashboard() {
             streakDays={userData?.streakDays || 0}
             averageScore={{
               percentage: analyticsData?.summary?.accuracy || 0,
-              change: 3, // Hardcoded for demo
+              change: analyticsData?.summary?.change || 0
             }}
           />
 

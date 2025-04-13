@@ -20,6 +20,12 @@ export default function Practice() {
   const [startTime, setStartTime] = useState<number>(Date.now());
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
 
+  // Fetch user data first
+  const { data: userData, isLoading: userLoading } = useQuery({
+    queryKey: ['/api/user'],
+    retry: false,
+  });
+
   // Fetch topic data
   const { data: topicData, isLoading: topicLoading } = useQuery({
     queryKey: topicId ? [`/api/topics/${topicId}`] : null,
@@ -36,12 +42,23 @@ export default function Practice() {
   const { data: topicsData, isLoading: topicsLoading } = useQuery({
     queryKey: ['/api/topics'],
   });
+  
+  // Fetch user progress data (after userData is fetched)
+  const { data: progressData, isLoading: progressLoading } = useQuery({
+    queryKey: ['/api/progress', userData?.id],
+    enabled: !!userData?.id,
+  });
 
-  // Format topics with progress data (simplified for demo)
-  const topics = topicsData?.map((topic: any) => ({
-    ...topic,
-    progress: topic.id === topicId ? 75 : 50, // Placeholder progress
-  }));
+  // Format topics with actual progress data
+  const topics = topicsData?.map((topic: any) => {
+    const topicProgress = progressData?.find((p: any) => p.topicId === topic.id);
+    return {
+      ...topic,
+      progress: topicProgress 
+        ? Math.round((topicProgress.questionsCorrect / topicProgress.questionsAttempted) * 100) || 0
+        : 0
+    };
+  });
 
   // Submit answer mutation
   const answerMutation = useMutation({
@@ -49,7 +66,9 @@ export default function Practice() {
       apiRequest('POST', '/api/answers', data),
     onSuccess: () => {
       // Invalidate relevant queries to refetch data
-      queryClient.invalidateQueries({ queryKey: [`/api/progress/1`] });
+      if (userData?.id) {
+        queryClient.invalidateQueries({ queryKey: ['/api/progress', userData.id] });
+      }
     },
   });
 
@@ -89,10 +108,10 @@ export default function Practice() {
 
   // Handle submitting an answer
   const handleSubmitAnswer = (answer: string, isCorrect: boolean, timeSpent: number) => {
-    if (!topicId) return;
+    if (!topicId || !userData?.id) return;
     
     answerMutation.mutate({
-      userId: 1, // Hardcoded for demo
+      userId: userData.id,
       questionId: questions[currentQuestionIndex].id,
       userOption: answer,
       isCorrect,
@@ -137,8 +156,8 @@ export default function Practice() {
       <SideNavigation
         topics={topics || []}
         user={{
-          username: 'Alex Morgan', // Hardcoded for demo
-          level: 'Level II Candidate', // Hardcoded for demo
+          username: userData?.username || 'User',
+          level: userData?.level || 'CFA Candidate',
         }}
         activeTopic={topicId || undefined}
       />
