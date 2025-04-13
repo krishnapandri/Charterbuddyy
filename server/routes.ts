@@ -13,6 +13,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, hashPassword } from "./auth";
+import { sendPasswordResetEmail } from "./email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -669,8 +670,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           resetPasswordExpires: resetTokenExpires
         });
         
-        // In a real application, you would send an email with the reset code
-        console.log(`Reset code for ${email}: ${resetCode}`);
+        // Send password reset email
+        await sendPasswordResetEmail(email, resetCode);
       }
       
       // Always return success to prevent user enumeration
@@ -678,6 +679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "If the email exists in our system, a reset code has been sent." 
       });
     } catch (error) {
+      console.error("Error in /api/forgot-password:", error);
       res.status(500).json({ message: "Error processing request" });
     }
   });
