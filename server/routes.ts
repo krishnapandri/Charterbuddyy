@@ -378,8 +378,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // GET /api/chapters/all - Get all chapters
-  app.get("/api/chapters/all", async (req, res) => {
+  // GET /api/chapters - Get all chapters
+  app.get("/api/chapters", async (req, res) => {
     try {
       // First fetch all topics
       const topics = await storage.getAllTopics();

@@ -27,6 +27,7 @@ function Router() {
       <ProtectedRoute path="/practice/:topicId" component={Practice} />
       <ProtectedRoute path="/analytics" component={Analytics} />
       <ProtectedRoute path="/manage-questions" component={ManageQuestions} />
+      <ProtectedRoute path="/manage-chapters" component={ManageChapters} />
       
       {/* Admin routes */}
       <AdminRoute path="/admin" component={AdminDashboard} />
