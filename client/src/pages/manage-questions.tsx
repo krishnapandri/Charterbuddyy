@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { SideNavigation } from '@/components/layout/side-navigation';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { insertQuestionSchema } from '@shared/schema';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 // Extended schema with validation
@@ -66,10 +66,16 @@ export default function ManageQuestions() {
       explanation: '',
       difficulty: 1,
     },
+    mode: 'onChange',
   });
   
   // State to store filtered chapters based on selected topic
   const [filteredChapters, setFilteredChapters] = useState<any[]>([]);
+  
+  // Watch for form value changes
+  const formValues = useWatch({
+    control: form.control
+  });
   
   // Update chapters when topic changes
   const handleTopicChange = (topicId: number) => {
@@ -81,6 +87,15 @@ export default function ManageQuestions() {
       setFilteredChapters(filtered);
     }
   };
+  
+  // Use effect to update form and UI state on changes
+  useEffect(() => {
+    const topicId = form.getValues('topicId');
+    if (topicId && chaptersData) {
+      const filtered = chaptersData.filter((chapter: any) => chapter.topicId === topicId);
+      setFilteredChapters(filtered);
+    }
+  }, [formValues.topicId, chaptersData]);
 
   const createQuestionMutation = useMutation({
     mutationFn: (data: QuestionFormValues) => 
@@ -90,7 +105,26 @@ export default function ManageQuestions() {
         title: 'Success',
         description: 'Question created successfully',
       });
-      form.reset();
+      
+      // Reset form with default values
+      form.reset({
+        topicId: 0,
+        chapterId: 0,
+        subtopic: '',
+        questionText: '',
+        context: '',
+        optionA: '',
+        optionB: '',
+        optionC: '',
+        optionD: '',
+        correctOption: '',
+        explanation: '',
+        difficulty: 1,
+      });
+      
+      // Clear filtered chapters
+      setFilteredChapters([]);
+      
       // Invalidate queries to refresh data if needed
       queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
     },
@@ -174,7 +208,7 @@ export default function ManageQuestions() {
                     <Label htmlFor="topicId">Topic *</Label>
                     <Select 
                       onValueChange={(value) => handleTopicChange(parseInt(value))}
-                      defaultValue={form.getValues('topicId').toString()}
+                      value={form.getValues('topicId') ? form.getValues('topicId').toString() : undefined}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a topic" />
@@ -197,7 +231,7 @@ export default function ManageQuestions() {
                     <Label htmlFor="chapterId">Chapter *</Label>
                     <Select 
                       onValueChange={(value) => form.setValue('chapterId', parseInt(value))}
-                      defaultValue={form.getValues('chapterId').toString()}
+                      value={form.getValues('chapterId') ? form.getValues('chapterId').toString() : undefined}
                       disabled={!form.getValues('topicId')}
                     >
                       <SelectTrigger>
@@ -315,7 +349,7 @@ export default function ManageQuestions() {
                   <Label htmlFor="correctOption">Correct Answer *</Label>
                   <Select 
                     onValueChange={(value) => form.setValue('correctOption', value)}
-                    defaultValue={form.getValues('correctOption')}
+                    value={form.getValues('correctOption') || undefined}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select correct answer" />
@@ -351,7 +385,7 @@ export default function ManageQuestions() {
                   <Label htmlFor="difficulty">Difficulty Level</Label>
                   <Select 
                     onValueChange={(value) => form.setValue('difficulty', parseInt(value))}
-                    defaultValue={form.getValues('difficulty').toString()}
+                    value={form.getValues('difficulty') ? form.getValues('difficulty').toString() : "1"}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select difficulty" />
