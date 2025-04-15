@@ -85,6 +85,8 @@ export default function ManageQuestions() {
     if (chaptersData) {
       const filtered = chaptersData.filter((chapter: any) => chapter.topicId === topicId);
       setFilteredChapters(filtered);
+      if(filtered && filtered.length==1)
+          form.setValue('chapterId',filtered[0].id); // set top 1 chapter
     }
   };
   
@@ -94,6 +96,8 @@ export default function ManageQuestions() {
     if (topicId && chaptersData) {
       const filtered = chaptersData.filter((chapter: any) => chapter.topicId === topicId);
       setFilteredChapters(filtered);
+      if(filtered && filtered.length==1)
+        form.setValue('chapterId',filtered[0].id); // set top 1 chapter
     }
   }, [formValues.topicId, chaptersData]);
 
@@ -108,8 +112,8 @@ export default function ManageQuestions() {
       
       // Reset form with default values
       form.reset({
-        topicId: 0,
-        chapterId: 0,
+        // topicId: 0,
+        // chapterId: 0,
         subtopic: '',
         questionText: '',
         context: '',
@@ -123,7 +127,7 @@ export default function ManageQuestions() {
       });
       
       // Clear filtered chapters
-      setFilteredChapters([]);
+      // setFilteredChapters([]);
       
       // Invalidate queries to refresh data if needed
       queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
@@ -232,7 +236,6 @@ export default function ManageQuestions() {
                     <Select 
                       onValueChange={(value) => form.setValue('chapterId', parseInt(value))}
                       value={form.getValues('chapterId') ? form.getValues('chapterId').toString() : undefined}
-                      disabled={!form.getValues('topicId')}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a chapter" />
@@ -349,7 +352,7 @@ export default function ManageQuestions() {
                   <Label htmlFor="correctOption">Correct Answer *</Label>
                   <Select 
                     onValueChange={(value) => form.setValue('correctOption', value)}
-                    value={form.getValues('correctOption') || undefined}
+                    value={form.getValues('correctOption') || ""}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select correct answer" />
@@ -404,7 +407,12 @@ export default function ManageQuestions() {
                   className="w-full sm:w-auto"
                   disabled={createQuestionMutation.isPending}
                 >
-                  {createQuestionMutation.isPending ? 'Saving...' : (
+                  {createQuestionMutation.isPending ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-transparent border-white rounded-full"></div>
+                      Saving...
+                    </div>
+                  ) : (
                     <>
                       <Save className="w-4 h-4 mr-2" />
                       Save Question
