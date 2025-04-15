@@ -112,8 +112,8 @@ export default function ManageQuestions() {
       
       // Reset form with default values
       form.reset({
-        // topicId: 0,
-        // chapterId: 0,
+        topicId: 0,
+        chapterId: 0,
         subtopic: '',
         questionText: '',
         context: '',
@@ -127,7 +127,7 @@ export default function ManageQuestions() {
       });
       
       // Clear filtered chapters
-      // setFilteredChapters([]);
+      setFilteredChapters([]);
       
       // Invalidate queries to refresh data if needed
       queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
@@ -142,7 +142,14 @@ export default function ManageQuestions() {
   });
 
   const onSubmit = (data: QuestionFormValues) => {
-    createQuestionMutation.mutate(data);
+    // Log form data for debugging
+    console.log('Form submission data:', data);
+    
+    // Make sure to clone the data to avoid reference issues
+    const submissionData = {...data};
+    
+    // Create the question
+    createQuestionMutation.mutate(submissionData);
   };
 
   const handleBackToDashboard = () => {
@@ -236,6 +243,7 @@ export default function ManageQuestions() {
                     <Select 
                       onValueChange={(value) => form.setValue('chapterId', parseInt(value))}
                       value={form.getValues('chapterId') ? form.getValues('chapterId').toString() : undefined}
+                      disabled={!form.getValues('topicId') || form.getValues('topicId') === 0}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a chapter" />
