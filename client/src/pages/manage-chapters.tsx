@@ -17,6 +17,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AddQuantsChapters } from '@/components/actions/add-quants-chapters';
 
 // Extended schema with validation
 const chapterFormSchema = insertChapterSchema.extend({
@@ -225,6 +226,15 @@ export default function ManageChapters() {
                 </h2>
 
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Quants chapters quick add */}
+                  <div className="mb-6 p-3 border border-primary/20 rounded-md bg-primary/5">
+                    <h3 className="text-sm font-medium mb-2 text-primary">Quick Add Quants Chapters</h3>
+                    <p className="text-xs text-neutral-500 mb-2">
+                      Automatically add all required chapters for the Quants topic.
+                    </p>
+                    <AddQuantsChapters />
+                  </div>
+                
                   {/* Topic Selection */}
                   <div className="space-y-2">
                     <Label htmlFor="topicId">Topic *</Label>
