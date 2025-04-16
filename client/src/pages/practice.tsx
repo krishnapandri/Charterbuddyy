@@ -9,10 +9,14 @@ import { queryClient, apiRequest } from '@/lib/queryClient';
 import { cn } from '@/lib/utils';
 
 export default function Practice() {
-  // Get topicId from URL parameter
+  // Get topicId and chapterId from URL parameters
   const [match, params] = useRoute('/practice/:topicId');
   const [, setLocation] = useLocation();
   const topicId = match ? parseInt(params.topicId) : null;
+  
+  // Extract chapter from URL query parameters
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const chapterId = searchParams.get('chapter') ? parseInt(searchParams.get('chapter')!) : null;
 
   // State for practice session
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -34,9 +38,23 @@ export default function Practice() {
     enabled: !!topicId,
   });
 
-  // Fetch questions for the topic
+  // Fetch questions for the topic or chapter
   const { data: questionsData, isLoading: questionsLoading } = useQuery({
-    queryKey: topicId ? ['/api/topic-questions/'+topicId] : [''],
+    queryKey: topicId ? 
+      (chapterId ? 
+        ['/api/chapters', chapterId, 'questions'] : 
+        ['/api/topic-questions/'+topicId]
+      ) : [''],
+    queryFn: async () => {
+      // If we have a chapterId, fetch questions for that specific chapter
+      if (chapterId) {
+        const res = await apiRequest('GET', `/api/questions/chapter/${chapterId}`);
+        return await res.json();
+      }
+      // Otherwise, fetch all questions for the topic
+      const res = await apiRequest('GET', `/api/topic-questions/${topicId}`);
+      return await res.json();
+    },
     enabled: !!topicId,
   });
   
