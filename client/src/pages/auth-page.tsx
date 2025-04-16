@@ -158,7 +158,7 @@ export default function AuthPage() {
       {/* Left column - Authentication Forms */}
       <div className="flex flex-col justify-center w-full max-w-md p-8 md:p-12">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">CFA Practice Hub</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Charterbuddy Practice Hub</h1>
           <p className="text-muted-foreground">
             The ultimate platform for CFA Level 1 exam preparation
           </p>

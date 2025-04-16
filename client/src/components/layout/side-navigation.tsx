@@ -236,7 +236,7 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
       >
         <div className="flex flex-col w-64 h-full border-r border-neutral-200 bg-white">
           <div className="flex items-center justify-center h-16 px-4 border-b border-neutral-200 bg-primary">
-            <h1 className="text-xl font-bold text-white">CFA Practice Hub</h1>
+            <h1 className="text-xl font-bold text-white">Charterbuddy Practice Hub</h1>
           </div>
           
           <div className="flex flex-col justify-between h-full">

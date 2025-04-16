@@ -81,7 +81,7 @@ export default function Analytics() {
         <div className="bg-white shadow-sm">
           <div className="flex items-center justify-between h-16 px-6">
             <div className="flex items-center lg:hidden">
-              <h1 className="text-xl font-bold text-primary">CFA Practice Hub</h1>
+              <h1 className="text-xl font-bold text-primary">Charterbuddy Practice Hub</h1>
             </div>
             <div className="flex items-center">
               <button className="mr-4 text-neutral-400 hover:text-neutral-800">
