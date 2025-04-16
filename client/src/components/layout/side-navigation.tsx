@@ -385,7 +385,11 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
                                     
                                     {user.role === 'admin' && (
                                       <button
-                                        onClick={(e) => handleDeleteChapter(e, chapter.id)}
+                                        onClick={(e) => {
+                                          e.preventDefault(); // Prevent navigation when clicking delete
+                                          e.stopPropagation(); // Stop event from bubbling up
+                                          handleDeleteChapter(e, chapter.id);
+                                        }}
                                         className="p-1 text-neutral-400 hover:text-red-500 opacity-0 group-hover:opacity-100 hover:opacity-100"
                                         aria-label="Delete chapter"
                                       >
