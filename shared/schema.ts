@@ -72,20 +72,25 @@ export const questions = pgTable("questions", {
   difficulty: integer("difficulty").notNull().default(1), // 1-3: easy, medium, hard
 });
 
-export const insertQuestionSchema = createInsertSchema(questions).pick({
-  topicId: true,
-  chapterId: true,
-  subtopic: true,
-  questionText: true,
-  context: true,
-  optionA: true,
-  optionB: true,
-  optionC: true,
-  optionD: true,
-  correctOption: true,
-  explanation: true,
-  difficulty: true,
-});
+export const insertQuestionSchema = createInsertSchema(questions)
+  .pick({
+    topicId: true,
+    chapterId: true,
+    subtopic: true,
+    questionText: true,
+    context: true,
+    optionA: true,
+    optionB: true,
+    optionC: true,
+    optionD: true,
+    correctOption: true,
+    explanation: true,
+    difficulty: true,
+  })
+  // Make optionD optional since we now use only 3 options
+  .extend({
+    optionD: z.string().optional(),
+  });
 
 // User answers tracking
 export const userAnswers = pgTable("user_answers", {
