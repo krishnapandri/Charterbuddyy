@@ -66,7 +66,7 @@ export const questions = pgTable("questions", {
   optionA: text("option_a").notNull(),
   optionB: text("option_b").notNull(),
   optionC: text("option_c").notNull(),
-  optionD: text("option_d").notNull(),
+  optionD: text("option_d"),  // Removed notNull to support 3-option questions
   correctOption: text("correct_option").notNull(),
   explanation: text("explanation").notNull(),
   difficulty: integer("difficulty").notNull().default(1), // 1-3: easy, medium, hard

@@ -146,7 +146,11 @@ export default function ManageQuestions() {
     console.log('Form submission data:', data);
     
     // Make sure to clone the data to avoid reference issues
-    const submissionData = {...data};
+    const submissionData = {
+      ...data,
+      // Set optionD to empty string - we only use 3 options now (A, B, C)
+      optionD: ''
+    };
     
     // Create the question
     createQuestionMutation.mutate(submissionData);
@@ -342,17 +346,7 @@ export default function ManageQuestions() {
                     )}
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="optionD">Option D</Label>
-                    <Input 
-                      id="optionD" 
-                      {...form.register('optionD')}
-                      placeholder="Enter option D"
-                    />
-                    {form.formState.errors.optionD && (
-                      <p className="text-sm text-red-500">{form.formState.errors.optionD.message}</p>
-                    )}
-                  </div>
+{/* Option D has been removed */}
                 </div>
 
                 {/* Correct Answer */}
@@ -369,7 +363,6 @@ export default function ManageQuestions() {
                       <SelectItem value="A">Option A</SelectItem>
                       <SelectItem value="B">Option B</SelectItem>
                       <SelectItem value="C">Option C</SelectItem>
-                      <SelectItem value="D">Option D</SelectItem>
                     </SelectContent>
                   </Select>
                   {form.formState.errors.correctOption && (

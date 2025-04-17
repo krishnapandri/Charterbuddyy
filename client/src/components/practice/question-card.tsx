@@ -14,7 +14,7 @@ export type Question = {
   optionA: string;
   optionB: string;
   optionC: string;
-  optionD: string;
+  optionD?: string; // Option D is now optional
   correctOption: string;
   explanation: string;
 };
@@ -104,15 +104,18 @@ export function QuestionCard({
               isSubmitted={isSubmitted}
               onClick={() => handleOptionClick('C')}
             />
-            <QuestionOption
-              option="D"
-              label="D"
-              text={question.optionD}
-              isSelected={selectedOption === 'D'}
-              isCorrect={question.correctOption === 'D'}
-              isSubmitted={isSubmitted}
-              onClick={() => handleOptionClick('D')}
-            />
+            {/* Only render option D if it exists */}
+            {question.optionD && (
+              <QuestionOption
+                option="D"
+                label="D"
+                text={question.optionD || ''}
+                isSelected={selectedOption === 'D'}
+                isCorrect={question.correctOption === 'D'}
+                isSubmitted={isSubmitted}
+                onClick={() => handleOptionClick('D')}
+              />
+            )}
           </div>
 
           <div className="mt-6 flex justify-end">
