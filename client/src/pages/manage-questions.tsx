@@ -24,7 +24,7 @@ const questionFormSchema = insertQuestionSchema.extend({
   optionA: z.string().min(1, 'Option A is required'),
   optionB: z.string().min(1, 'Option B is required'),
   optionC: z.string().min(1, 'Option C is required'),
-  optionD: z.string().min(1, 'Option D is required'),
+  // optionD: z.string().min(1, 'Option D is required'),
   correctOption: z.string().min(1, 'Correct answer is required'),
   explanation: z.string().min(10, 'Explanation must be at least 10 characters'),
 });
@@ -102,8 +102,7 @@ export default function ManageQuestions() {
   }, [formValues.topicId, chaptersData]);
 
   const createQuestionMutation = useMutation({
-    mutationFn: (data: QuestionFormValues) => 
-      apiRequest('POST', '/api/questions', data),
+    mutationFn: (data: QuestionFormValues) => apiRequest('POST', '/api/questions', data),
     onSuccess: () => {
       toast({
         title: 'Success',

@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import { logErrorToDatabase } from "./error-logger";
 // Set a default session secret if not provided in environment variables
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'cfaprep-secret-key-development';
-await (async ()=>seedDatabase())();
+//await (async ()=>seedDatabase())();
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
