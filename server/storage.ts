@@ -151,6 +151,7 @@ export class MemStorage implements IStorage {
     this.userActivity = new Map();
     this.practiceSets = new Map();
     this.errorLogs = new Map();
+    this.payments = new Map();
     
     this.userIdCounter = 1;
     this.topicIdCounter = 1;
@@ -161,6 +162,7 @@ export class MemStorage implements IStorage {
     this.userActivityIdCounter = 1;
     this.practiceSetIdCounter = 1;
     this.errorLogIdCounter = 1;
+    this.paymentIdCounter = 1;
   }
   
   // User operations
@@ -191,7 +193,9 @@ export class MemStorage implements IStorage {
       resetPasswordToken: null,
       resetPasswordExpires: null,
       // Email might be null but schema requires the property to exist
-      email: insertUser.email || null
+      email: insertUser.email || null,
+      // Default premium status
+      isPremium: false
     };
     
     this.users.set(id, user);
@@ -482,6 +486,100 @@ export class MemStorage implements IStorage {
     return limit ? logs.slice(0, limit) : logs;
   }
   
+  // Payment operations
+  async createPayment(insertPayment: InsertPayment): Promise<Payment> {
+    const id = this.paymentIdCounter++;
+    const payment: Payment = {
+      ...insertPayment,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.payments.set(id, payment);
+    
+    // Record activity for payment
+    await this.createUserActivity({
+      userId: payment.userId,
+      activityType: 'payment_created',
+      details: {
+        paymentId: payment.id,
+        amount: payment.amount,
+        status: payment.status,
+        planType: payment.planType
+      }
+    });
+    
+    return payment;
+  }
+  
+  async getPayment(id: number): Promise<Payment | undefined> {
+    return this.payments.get(id);
+  }
+  
+  async getUserPayments(userId: number): Promise<Payment[]> {
+    return Array.from(this.payments.values())
+      .filter(payment => payment.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  
+  async getPaymentByOrderId(orderId: string): Promise<Payment | undefined> {
+    return Array.from(this.payments.values())
+      .find(payment => payment.razorpayOrderId === orderId);
+  }
+  
+  async updatePayment(id: number, paymentData: Partial<Payment>): Promise<Payment> {
+    const payment = await this.getPayment(id);
+    if (!payment) {
+      throw new Error(`Payment with id ${id} not found`);
+    }
+    
+    const updatedPayment = { 
+      ...payment, 
+      ...paymentData,
+      updatedAt: new Date() 
+    };
+    this.payments.set(id, updatedPayment);
+    
+    // If payment is captured/successful, update user premium status
+    if (updatedPayment.status === 'captured' || updatedPayment.status === 'authorized') {
+      await this.updateUserPremiumStatus(payment.userId, true);
+      
+      // Record activity for successful payment
+      await this.createUserActivity({
+        userId: payment.userId,
+        activityType: 'payment_success',
+        details: {
+          paymentId: payment.id,
+          amount: payment.amount,
+          planType: payment.planType
+        }
+      });
+    }
+    
+    return updatedPayment;
+  }
+  
+  async updateUserPremiumStatus(userId: number, isPremium: boolean): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+    
+    const updatedUser = { ...user, isPremium };
+    this.users.set(userId, updatedUser);
+    
+    // Record activity for premium status change
+    await this.createUserActivity({
+      userId,
+      activityType: isPremium ? 'premium_activated' : 'premium_deactivated',
+      details: {
+        timestamp: new Date()
+      }
+    });
+    
+    return updatedUser;
+  }
+
   // Helper methods
   private async updateUserProgressAfterAnswer(answer: UserAnswer): Promise<void> {
     const question = await this.getQuestion(answer.questionId);
@@ -537,8 +635,106 @@ export class DatabaseStorage implements IStorage {
       pool,
       createTableIfMissing: true,
       tableName: 'session',
-      conString:process.env.DATABASE_URL
+      conString: process.env.DATABASE_URL
     });
+  }
+  
+  // Payment operations
+  async createPayment(insertPayment: InsertPayment): Promise<Payment> {
+    const [payment] = await db.insert(payments)
+      .values({
+        ...insertPayment,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    
+    // Record activity for payment
+    await this.createUserActivity({
+      userId: payment.userId,
+      activityType: 'payment_created',
+      details: {
+        paymentId: payment.id,
+        amount: payment.amount,
+        status: payment.status,
+        planType: payment.planType
+      }
+    });
+    
+    return payment;
+  }
+  
+  async getPayment(id: number): Promise<Payment | undefined> {
+    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+    return payment;
+  }
+  
+  async getUserPayments(userId: number): Promise<Payment[]> {
+    return db.select()
+      .from(payments)
+      .where(eq(payments.userId, userId))
+      .orderBy(desc(payments.createdAt));
+  }
+  
+  async getPaymentByOrderId(orderId: string): Promise<Payment | undefined> {
+    const [payment] = await db.select()
+      .from(payments)
+      .where(eq(payments.razorpayOrderId, orderId));
+    return payment;
+  }
+  
+  async updatePayment(id: number, paymentData: Partial<Payment>): Promise<Payment> {
+    const [updatedPayment] = await db.update(payments)
+      .set({
+        ...paymentData,
+        updatedAt: new Date()
+      })
+      .where(eq(payments.id, id))
+      .returning();
+    
+    if (!updatedPayment) {
+      throw new Error(`Payment with id ${id} not found`);
+    }
+    
+    // If payment is captured/successful, update user premium status
+    if (updatedPayment.status === 'captured' || updatedPayment.status === 'authorized') {
+      await this.updateUserPremiumStatus(updatedPayment.userId, true);
+      
+      // Record activity for successful payment
+      await this.createUserActivity({
+        userId: updatedPayment.userId,
+        activityType: 'payment_success',
+        details: {
+          paymentId: updatedPayment.id,
+          amount: updatedPayment.amount,
+          planType: updatedPayment.planType
+        }
+      });
+    }
+    
+    return updatedPayment;
+  }
+  
+  async updateUserPremiumStatus(userId: number, isPremium: boolean): Promise<User> {
+    const [updatedUser] = await db.update(users)
+      .set({ isPremium })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+    
+    // Record activity for premium status change
+    await this.createUserActivity({
+      userId,
+      activityType: isPremium ? 'premium_activated' : 'premium_deactivated',
+      details: {
+        timestamp: new Date()
+      }
+    });
+    
+    return updatedUser;
   }
   
   // User operations
@@ -562,6 +758,8 @@ export class DatabaseStorage implements IStorage {
       role: insertUser.role || 'student',
       // Default level if not specified
       level: insertUser.level || 'Level I Candidate',
+      // Default premium status
+      isPremium: false,
       // Empty reset token fields are handled by the schema defaults
       email: insertUser.email || null
     };
