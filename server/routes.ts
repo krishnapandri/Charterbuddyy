@@ -14,6 +14,12 @@ import {
 import { z } from "zod";
 import { setupAuth, hashPassword } from "./auth";
 import { sendPasswordResetEmail } from "./email";
+import { 
+  createSubscriptionOrder, 
+  verifyPaymentSignature, 
+  SUBSCRIPTION_PLANS,
+  requirePremium 
+} from "./razorpay";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -757,6 +763,200 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ message: "Error resetting password" });
     }
+  });
+
+  // Payment routes
+  
+  // GET /api/subscription/plans - Get all available subscription plans
+  app.get("/api/subscription/plans", (req, res) => {
+    res.json(Object.values(SUBSCRIPTION_PLANS));
+  });
+  
+  // POST /api/subscription/create-order - Create a new subscription order
+  app.post("/api/subscription/create-order", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const { planId } = req.body;
+      if (!planId) {
+        return res.status(400).json({ message: "Plan ID is required" });
+      }
+      
+      // Create the subscription order
+      const order = await createSubscriptionOrder(req.user.id, planId);
+      
+      res.json({
+        order_id: order.orderId,
+        amount: order.amount,
+        currency: order.currency,
+        key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_dummy_key_id',
+        plan_type: order.planType
+      });
+    } catch (error) {
+      console.error('Error creating subscription order:', error);
+      res.status(500).json({ message: "Failed to create subscription order" });
+    }
+  });
+  
+  // POST /api/subscription/verify-payment - Verify a payment after completion
+  app.post("/api/subscription/verify-payment", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+      
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(400).json({ message: "All payment details are required" });
+      }
+      
+      // Verify the payment signature
+      const isValidSignature = verifyPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+      
+      if (!isValidSignature) {
+        // Log the failed verification
+        await storage.logError({
+          errorMessage: "Payment signature verification failed",
+          userId: req.user.id,
+          metadata: { razorpay_order_id, razorpay_payment_id },
+          route: "/api/subscription/verify-payment",
+          method: "POST"
+        });
+        
+        return res.status(400).json({ message: "Invalid payment signature" });
+      }
+      
+      // Get the payment from storage
+      const payment = await storage.getPaymentByOrderId(razorpay_order_id);
+      
+      if (!payment) {
+        return res.status(404).json({ message: "Payment record not found" });
+      }
+      
+      // Update the payment status
+      const updatedPayment = await storage.updatePayment(payment.id, {
+        status: 'captured',
+        razorpayPaymentId: razorpay_payment_id,
+        razorpaySignature: razorpay_signature
+      });
+      
+      // Update user premium status (this is now handled in updatePayment method)
+      
+      res.json({
+        success: true,
+        message: "Payment verified successfully",
+        premium_activated: true
+      });
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      res.status(500).json({ message: "Failed to verify payment" });
+    }
+  });
+  
+  // GET /api/subscription/status - Get current user's subscription status
+  app.get("/api/subscription/status", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const user = await storage.getUser(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get the user's payment history
+      const payments = await storage.getUserPayments(user.id);
+      
+      // Find the most recent successful payment
+      const latestSuccessfulPayment = payments.find(p => 
+        p.status === 'captured' || p.status === 'authorized'
+      );
+      
+      res.json({
+        is_premium: user.isPremium,
+        payment_history: payments.map(p => ({
+          id: p.id,
+          status: p.status,
+          amount: p.amount,
+          currency: p.currency,
+          plan_type: p.planType,
+          created_at: p.createdAt
+        })),
+        latest_payment: latestSuccessfulPayment ? {
+          id: latestSuccessfulPayment.id,
+          status: latestSuccessfulPayment.status,
+          amount: latestSuccessfulPayment.amount,
+          currency: latestSuccessfulPayment.currency,
+          plan_type: latestSuccessfulPayment.planType,
+          created_at: latestSuccessfulPayment.createdAt
+        } : null
+      });
+    } catch (error) {
+      console.error('Error getting subscription status:', error);
+      res.status(500).json({ message: "Failed to get subscription status" });
+    }
+  });
+  
+  // POST /api/subscription/cancel - Cancel current subscription
+  app.post("/api/subscription/cancel", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      // In a real implementation, we would call Razorpay API to cancel subscription
+      // For now, we'll just update the user's premium status
+      const user = await storage.updateUserPremiumStatus(req.user.id, false);
+      
+      // Record the cancellation activity
+      await storage.createUserActivity({
+        userId: req.user.id,
+        activityType: 'subscription_cancelled',
+        details: {
+          timestamp: new Date(),
+          reason: req.body.reason || 'User initiated cancellation'
+        }
+      });
+      
+      res.json({
+        success: true,
+        message: "Subscription cancelled successfully",
+        is_premium: false
+      });
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+      res.status(500).json({ message: "Failed to cancel subscription" });
+    }
+  });
+  
+  // Example protected route that requires premium access
+  app.get("/api/premium-content", requirePremium, async (req, res) => {
+    // This route is protected and only accessible to premium users
+    res.json({
+      message: "You have access to premium content",
+      premium_content: [
+        {
+          id: 1,
+          title: "Advanced CFA Level 1 Strategies",
+          description: "Exclusive strategies to tackle the most challenging CFA Level 1 topics"
+        },
+        {
+          id: 2,
+          title: "Mock Exam Bundle",
+          description: "Full-length mock exams with detailed solutions and performance analysis"
+        },
+        {
+          id: 3,
+          title: "Expert Q&A Sessions",
+          description: "Recorded Q&A sessions with CFA charterholders"
+        }
+      ]
+    });
   });
 
   const httpServer = createServer(app);
