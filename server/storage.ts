@@ -9,6 +9,7 @@ import {
   practiceSets,
   errorLogs,
   payments,
+  subscriptions,
   type User,
   type InsertUser,
   type Topic,
@@ -28,7 +29,9 @@ import {
   type ErrorLog,
   type InsertErrorLog,
   type Payment,
-  type InsertPayment
+  type InsertPayment,
+  type Subscription,
+  type InsertSubscription
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -105,6 +108,17 @@ export interface IStorage {
   getUserPayments(userId: number): Promise<Payment[]>;
   getPaymentByOrderId(orderId: string): Promise<Payment | undefined>;
   updatePayment(id: number, paymentData: Partial<Payment>): Promise<Payment>;
+  
+  // Razorpay customer operations
+  updateRazorpayCustomerId(userId: number, customerId: string): Promise<User>;
+  
+  // Subscription operations
+  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
+  getSubscription(id: number): Promise<Subscription | undefined>;
+  getActiveSubscription(userId: number): Promise<Subscription | undefined>;
+  getUserSubscriptions(userId: number): Promise<Subscription[]>;
+  updateSubscription(id: number, subscriptionData: Partial<Subscription>): Promise<Subscription>;
+  checkAndUpdateSubscriptionStatus(id: number): Promise<Subscription>;
   updateUserPremiumStatus(userId: number, isPremium: boolean): Promise<User>;
 }
 
@@ -120,6 +134,7 @@ export class MemStorage implements IStorage {
   private practiceSets: Map<number, PracticeSet>;
   private errorLogs: Map<number, ErrorLog>;
   private payments: Map<number, Payment>;
+  private subscriptions: Map<number, Subscription>;
   
   private userIdCounter: number;
   private topicIdCounter: number;
@@ -131,6 +146,7 @@ export class MemStorage implements IStorage {
   private practiceSetIdCounter: number;
   private errorLogIdCounter: number;
   private paymentIdCounter: number;
+  private subscriptionIdCounter: number;
   
   // Session store for authentication
   public sessionStore: session.Store;
@@ -152,6 +168,7 @@ export class MemStorage implements IStorage {
     this.practiceSets = new Map();
     this.errorLogs = new Map();
     this.payments = new Map();
+    this.subscriptions = new Map();
     
     this.userIdCounter = 1;
     this.topicIdCounter = 1;
@@ -163,6 +180,7 @@ export class MemStorage implements IStorage {
     this.practiceSetIdCounter = 1;
     this.errorLogIdCounter = 1;
     this.paymentIdCounter = 1;
+    this.subscriptionIdCounter = 1;
   }
   
   // User operations
@@ -195,7 +213,9 @@ export class MemStorage implements IStorage {
       // Email might be null but schema requires the property to exist
       email: insertUser.email || null,
       // Default premium status
-      isPremium: false
+      isPremium: false,
+      // Default razorpay customer ID
+      razorpayCustomerId: null
     };
     
     this.users.set(id, user);
