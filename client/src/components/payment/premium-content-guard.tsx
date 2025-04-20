@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import { useQuery } from '@tanstack/react-query';
@@ -40,11 +40,15 @@ export function PremiumContentGuard({
       
       return response.json();
     },
-    enabled: !!user,
-    onSettled: () => {
+    enabled: !!user
+  });
+  
+  // Update the isChecking state when the query settles
+  useEffect(() => {
+    if (!isLoading) {
       setIsChecking(false);
     }
-  });
+  }, [isLoading]);
   
   // If the auth check is loading
   if (isLoading || isChecking) {
