@@ -9,6 +9,7 @@ import Analytics from "@/pages/analytics";
 import ManageQuestions from "@/pages/manage-questions";
 import ManageChapters from "@/pages/manage-chapters";
 import ManageTopics from "@/pages/manage-topics";
+import Subscription from "@/pages/subscription";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -28,6 +29,7 @@ function Router() {
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/practice/:topicId" component={Practice} />
       <ProtectedRoute path="/analytics" component={Analytics} />
+      <ProtectedRoute path="/subscription" component={Subscription} />
       {/* Management routes for admin users only */}
       <AdminRoute path="/manage-questions" component={ManageQuestions} />
       <AdminRoute path="/manage-chapters" component={ManageChapters} />

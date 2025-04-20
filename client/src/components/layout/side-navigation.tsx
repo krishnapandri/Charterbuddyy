@@ -16,7 +16,8 @@ import {
   FolderOpen, 
   ChevronDown, 
   X, 
-  Plus
+  Plus,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
