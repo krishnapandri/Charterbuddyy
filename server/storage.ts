@@ -8,6 +8,7 @@ import {
   userActivity,
   practiceSets,
   errorLogs,
+  payments,
   type User,
   type InsertUser,
   type Topic,
@@ -25,7 +26,9 @@ import {
   type PracticeSet,
   type InsertPracticeSet,
   type ErrorLog,
-  type InsertErrorLog
+  type InsertErrorLog,
+  type Payment,
+  type InsertPayment
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -95,6 +98,14 @@ export interface IStorage {
   logError(errorLog: InsertErrorLog): Promise<ErrorLog>;
   getErrorLogs(limit?: number): Promise<ErrorLog[]>;
   getErrorLogsByUser(userId: number, limit?: number): Promise<ErrorLog[]>;
+  
+  // Payment operations
+  createPayment(payment: InsertPayment): Promise<Payment>;
+  getPayment(id: number): Promise<Payment | undefined>;
+  getUserPayments(userId: number): Promise<Payment[]>;
+  getPaymentByOrderId(orderId: string): Promise<Payment | undefined>;
+  updatePayment(id: number, paymentData: Partial<Payment>): Promise<Payment>;
+  updateUserPremiumStatus(userId: number, isPremium: boolean): Promise<User>;
 }
 
 // In-memory storage implementation
@@ -108,6 +119,7 @@ export class MemStorage implements IStorage {
   private userActivity: Map<number, UserActivity>;
   private practiceSets: Map<number, PracticeSet>;
   private errorLogs: Map<number, ErrorLog>;
+  private payments: Map<number, Payment>;
   
   private userIdCounter: number;
   private topicIdCounter: number;
@@ -118,6 +130,7 @@ export class MemStorage implements IStorage {
   private userActivityIdCounter: number;
   private practiceSetIdCounter: number;
   private errorLogIdCounter: number;
+  private paymentIdCounter: number;
   
   // Session store for authentication
   public sessionStore: session.Store;

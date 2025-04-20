@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -11,6 +11,7 @@ export const users = pgTable("users", {
   email: text("email"),
   level: text("level").notNull().default("Level I Candidate"),
   role: text("role").notNull().default("student"), // 'admin' or 'student'
+  isPremium: boolean("is_premium").notNull().default(false), // indicates if user has paid
   streakDays: integer("streak_days").notNull().default(0),
   lastLoginDate: timestamp("last_login_date").notNull().default(new Date()),
   resetPasswordToken: text("reset_password_token"),
@@ -302,3 +303,41 @@ export const errorLogsRelations = relations(errorLogs, ({ one }) => ({
 
 export type ErrorLog = typeof errorLogs.$inferSelect;
 export type InsertErrorLog = z.infer<typeof insertErrorLogSchema>;
+
+// Payments table
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  amount: integer("amount").notNull(), // Amount in smallest currency unit (e.g., cents)
+  currency: text("currency").notNull().default("INR"),
+  status: text("status").notNull(), // 'created', 'authorized', 'captured', 'failed'
+  razorpayPaymentId: text("razorpay_payment_id"),
+  razorpayOrderId: text("razorpay_order_id").notNull(),
+  razorpaySignature: text("razorpay_signature"),
+  planType: text("plan_type").notNull(), // 'monthly', 'yearly', etc.
+  metadata: json("metadata"), // Additional payment data
+  createdAt: timestamp("created_at").notNull().default(new Date()),
+  updatedAt: timestamp("updated_at").notNull().default(new Date()),
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).pick({
+  userId: true,
+  amount: true,
+  currency: true,
+  status: true,
+  razorpayOrderId: true,
+  razorpayPaymentId: true,
+  razorpaySignature: true,
+  planType: true,
+  metadata: true,
+});
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  user: one(users, {
+    fields: [payments.userId],
+    references: [users.id],
+  }),
+}));
+
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
