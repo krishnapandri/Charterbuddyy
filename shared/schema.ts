@@ -66,26 +66,31 @@ export const questions = pgTable("questions", {
   optionA: text("option_a").notNull(),
   optionB: text("option_b").notNull(),
   optionC: text("option_c").notNull(),
-  optionD: text("option_d").notNull(),
+  optionD: text("option_d"),  // Removed notNull to support 3-option questions
   correctOption: text("correct_option").notNull(),
   explanation: text("explanation").notNull(),
   difficulty: integer("difficulty").notNull().default(1), // 1-3: easy, medium, hard
 });
 
-export const insertQuestionSchema = createInsertSchema(questions).pick({
-  topicId: true,
-  chapterId: true,
-  subtopic: true,
-  questionText: true,
-  context: true,
-  optionA: true,
-  optionB: true,
-  optionC: true,
-  optionD: true,
-  correctOption: true,
-  explanation: true,
-  difficulty: true,
-});
+export const insertQuestionSchema = createInsertSchema(questions)
+  .pick({
+    topicId: true,
+    chapterId: true,
+    subtopic: true,
+    questionText: true,
+    context: true,
+    optionA: true,
+    optionB: true,
+    optionC: true,
+    optionD: true,
+    correctOption: true,
+    explanation: true,
+    difficulty: true,
+  })
+  // Make optionD optional since we now use only 3 options
+  .extend({
+    optionD: z.string().optional(),
+  });
 
 // User answers tracking
 export const userAnswers = pgTable("user_answers", {
