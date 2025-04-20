@@ -1,5 +1,6 @@
 // Database migration script to add subscription and payment functionality
-import { Pool } from 'pg';
+import pkg from 'pg';
+const { Pool } = pkg;
 import * as dotenv from 'dotenv';
 dotenv.config();
 
