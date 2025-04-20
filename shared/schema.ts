@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   level: text("level").notNull().default("Level I Candidate"),
   role: text("role").notNull().default("student"), // 'admin' or 'student'
   isPremium: boolean("is_premium").notNull().default(false), // indicates if user has paid
+  razorpayCustomerId: text("razorpay_customer_id"), // customer ID from Razorpay
   streakDays: integer("streak_days").notNull().default(0),
   lastLoginDate: timestamp("last_login_date").notNull().default(new Date()),
   resetPasswordToken: text("reset_password_token"),
@@ -174,12 +175,7 @@ export const insertPracticeSetSchema = createInsertSchema(practiceSets).pick({
 
 // Study Plans have been removed
 
-// Relation definitions
-export const usersRelations = relations(users, ({ many }) => ({
-  userAnswers: many(userAnswers),
-  userProgress: many(userProgress),
-  userActivity: many(userActivity)
-}));
+// Relation definitions - will be updated below with more relations
 
 export const topicsRelations = relations(topics, ({ many }) => ({
   questions: many(questions),
@@ -341,3 +337,52 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
 
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+
+// Subscriptions table
+export const subscriptions = pgTable("subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  planType: text("plan_type").notNull(), // 'monthly', 'yearly', etc.
+  status: text("status").notNull(), // 'active', 'cancelled', 'expired'
+  startDate: timestamp("start_date").notNull().default(new Date()),
+  endDate: timestamp("end_date").notNull(), // When subscription expires
+  autoRenew: boolean("auto_renew").notNull().default(false),
+  lastPaymentId: integer("last_payment_id").references(() => payments.id),
+  metadata: json("metadata"), // Additional subscription data
+  createdAt: timestamp("created_at").notNull().default(new Date()),
+  updatedAt: timestamp("updated_at").notNull().default(new Date()),
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).pick({
+  userId: true,
+  planType: true,
+  status: true,
+  startDate: true,
+  endDate: true,
+  autoRenew: true,
+  lastPaymentId: true,
+  metadata: true,
+});
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [subscriptions.userId],
+    references: [users.id],
+  }),
+  payment: one(payments, {
+    fields: [subscriptions.lastPaymentId],
+    references: [payments.id],
+  }),
+}));
+
+// Update user relations to include payments and subscriptions
+export const usersRelations = relations(users, ({ many }) => ({
+  userAnswers: many(userAnswers),
+  userProgress: many(userProgress),
+  userActivity: many(userActivity),
+  payments: many(payments),
+  subscriptions: many(subscriptions),
+}));
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
