@@ -486,7 +486,7 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
             
             {/* Footer links */}
             <div className="p-4 border-t border-neutral-200">
-              <Link href="/subscription">
+              {/* <Link href="/subscription">
                 <div className={cn(
                   "flex items-center text-sm text-neutral-800 hover:text-primary cursor-pointer",
                   location === "/subscription" && "text-primary"
@@ -494,8 +494,8 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
                   <CreditCard className="h-5 w-5 text-neutral-400 mr-3" />
                   Subscription
                 </div>
-              </Link>
-              <div className="flex items-center mt-3 text-sm text-neutral-800 hover:text-primary cursor-pointer">
+              </Link> */}
+              <div className="flex items-center text-sm text-neutral-800 hover:text-primary cursor-pointer">
                 <Settings className="h-5 w-5 text-neutral-400 mr-3" />
                 Settings
               </div>
