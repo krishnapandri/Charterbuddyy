@@ -243,7 +243,7 @@ export default function ManageQuestions() {
                     <Select 
                       onValueChange={(value) => form.setValue('chapterId', parseInt(value))}
                       value={form.getValues('chapterId') ? form.getValues('chapterId').toString() : undefined}
-                      disabled={!form.getValues('topicId') || form.getValues('topicId') === 0}
+                      disabled={!form.getValues('topicId')}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a chapter" />
