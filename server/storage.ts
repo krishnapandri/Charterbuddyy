@@ -599,6 +599,143 @@ export class MemStorage implements IStorage {
     
     return updatedUser;
   }
+  
+  // Update user's Razorpay customer ID
+  async updateRazorpayCustomerId(userId: number, customerId: string): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+    
+    const updatedUser = { ...user, razorpayCustomerId: customerId };
+    this.users.set(userId, updatedUser);
+    
+    return updatedUser;
+  }
+  
+  // Subscription operations
+  async createSubscription(subscription: InsertSubscription): Promise<Subscription> {
+    const id = this.subscriptionIdCounter++;
+    
+    const newSubscription: Subscription = {
+      ...subscription,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.subscriptions.set(id, newSubscription);
+    
+    // Update user premium status
+    await this.updateUserPremiumStatus(subscription.userId, true);
+    
+    // Record activity
+    await this.createUserActivity({
+      userId: subscription.userId,
+      activityType: 'subscription_created',
+      details: {
+        subscriptionId: id,
+        planType: subscription.planType,
+        startDate: subscription.startDate,
+        endDate: subscription.endDate
+      }
+    });
+    
+    return newSubscription;
+  }
+  
+  async getSubscription(id: number): Promise<Subscription | undefined> {
+    return this.subscriptions.get(id);
+  }
+  
+  async getActiveSubscription(userId: number): Promise<Subscription | undefined> {
+    return Array.from(this.subscriptions.values())
+      .filter(subscription => 
+        subscription.userId === userId && 
+        subscription.status === 'active'
+      )
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+  }
+  
+  async getUserSubscriptions(userId: number): Promise<Subscription[]> {
+    return Array.from(this.subscriptions.values())
+      .filter(subscription => subscription.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  
+  async updateSubscription(id: number, subscriptionData: Partial<Subscription>): Promise<Subscription> {
+    const subscription = await this.getSubscription(id);
+    if (!subscription) {
+      throw new Error(`Subscription with id ${id} not found`);
+    }
+    
+    const updatedSubscription: Subscription = {
+      ...subscription,
+      ...subscriptionData,
+      updatedAt: new Date()
+    };
+    
+    this.subscriptions.set(id, updatedSubscription);
+    
+    // If status changed to cancelled or expired, update user premium status
+    if (subscriptionData.status === 'cancelled' || subscriptionData.status === 'expired') {
+      await this.updateUserPremiumStatus(subscription.userId, false);
+      
+      // Record activity
+      await this.createUserActivity({
+        userId: subscription.userId,
+        activityType: 'subscription_' + subscriptionData.status,
+        details: {
+          subscriptionId: id,
+          reason: subscriptionData.status === 'expired' ? 'expired' : 'user_cancelled'
+        }
+      });
+    }
+    
+    return updatedSubscription;
+  }
+  
+  async checkAndUpdateSubscriptionStatus(id: number): Promise<Subscription> {
+    const subscription = await this.getSubscription(id);
+    if (!subscription) {
+      throw new Error(`Subscription with id ${id} not found`);
+    }
+    
+    // If already cancelled or expired, no need to check
+    if (subscription.status !== 'active') {
+      return subscription;
+    }
+    
+    const now = new Date();
+    
+    // If end date has passed, mark as expired
+    if (subscription.endDate < now) {
+      if (subscription.autoRenew) {
+        // Calculate new end date based on plan type
+        let newEndDate = new Date(subscription.endDate);
+        
+        if (subscription.planType === 'monthly') {
+          newEndDate.setMonth(newEndDate.getMonth() + 1);
+        } else if (subscription.planType === 'quarterly') {
+          newEndDate.setMonth(newEndDate.getMonth() + 3);
+        } else if (subscription.planType === 'yearly') {
+          newEndDate.setFullYear(newEndDate.getFullYear() + 1);
+        }
+        
+        return this.updateSubscription(id, {
+          startDate: subscription.endDate,
+          endDate: newEndDate
+        });
+      }
+      
+      // Otherwise, mark as expired
+      return this.updateSubscription(id, {
+        status: 'expired'
+      });
+    }
+    
+    return subscription;
+  }
 
   // Helper methods
   private async updateUserProgressAfterAnswer(answer: UserAnswer): Promise<void> {
@@ -757,6 +894,153 @@ export class DatabaseStorage implements IStorage {
     return updatedUser;
   }
   
+  // Update Razorpay customer ID for a user
+  async updateRazorpayCustomerId(userId: number, customerId: string): Promise<User> {
+    const [updatedUser] = await db.update(users)
+      .set({ razorpayCustomerId: customerId })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+    
+    return updatedUser;
+  }
+  
+  // Subscription operations
+  async createSubscription(subscription: InsertSubscription): Promise<Subscription> {
+    const [newSubscription] = await db.insert(subscriptions)
+      .values({
+        ...subscription,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+    
+    // Update user premium status
+    await this.updateUserPremiumStatus(subscription.userId, true);
+    
+    // Record activity
+    await this.createUserActivity({
+      userId: subscription.userId,
+      activityType: 'subscription_created',
+      details: {
+        subscriptionId: newSubscription.id,
+        planType: subscription.planType,
+        startDate: subscription.startDate,
+        endDate: subscription.endDate
+      }
+    });
+    
+    return newSubscription;
+  }
+  
+  async getSubscription(id: number): Promise<Subscription | undefined> {
+    const [subscription] = await db.select()
+      .from(subscriptions)
+      .where(eq(subscriptions.id, id));
+    
+    return subscription;
+  }
+  
+  async getActiveSubscription(userId: number): Promise<Subscription | undefined> {
+    const [subscription] = await db.select()
+      .from(subscriptions)
+      .where(and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.status, 'active')
+      ))
+      .orderBy(desc(subscriptions.createdAt))
+      .limit(1);
+    
+    return subscription;
+  }
+  
+  async getUserSubscriptions(userId: number): Promise<Subscription[]> {
+    return db.select()
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId))
+      .orderBy(desc(subscriptions.createdAt));
+  }
+  
+  async updateSubscription(id: number, subscriptionData: Partial<Subscription>): Promise<Subscription> {
+    const now = new Date();
+    const updateData = {
+      ...subscriptionData,
+      updatedAt: now
+    };
+    
+    const [updatedSubscription] = await db.update(subscriptions)
+      .set(updateData)
+      .where(eq(subscriptions.id, id))
+      .returning();
+    
+    if (!updatedSubscription) {
+      throw new Error(`Subscription with id ${id} not found`);
+    }
+    
+    // If status changed to cancelled or expired, update user premium status
+    if (subscriptionData.status === 'cancelled' || subscriptionData.status === 'expired') {
+      await this.updateUserPremiumStatus(updatedSubscription.userId, false);
+      
+      // Record activity
+      await this.createUserActivity({
+        userId: updatedSubscription.userId,
+        activityType: 'subscription_' + subscriptionData.status,
+        details: {
+          subscriptionId: id,
+          reason: subscriptionData.status === 'expired' ? 'expired' : 'user_cancelled'
+        }
+      });
+    }
+    
+    return updatedSubscription;
+  }
+  
+  async checkAndUpdateSubscriptionStatus(id: number): Promise<Subscription> {
+    const subscription = await this.getSubscription(id);
+    if (!subscription) {
+      throw new Error(`Subscription with id ${id} not found`);
+    }
+    
+    // If already cancelled or expired, no need to check
+    if (subscription.status !== 'active') {
+      return subscription;
+    }
+    
+    const now = new Date();
+    
+    // If end date has passed, mark as expired
+    if (subscription.endDate < now) {
+      // If auto-renew is enabled, extend the subscription
+      if (subscription.autoRenew) {
+        // Calculate new end date based on plan type
+        let newEndDate = new Date(subscription.endDate);
+        
+        if (subscription.planType === 'monthly') {
+          newEndDate.setMonth(newEndDate.getMonth() + 1);
+        } else if (subscription.planType === 'quarterly') {
+          newEndDate.setMonth(newEndDate.getMonth() + 3);
+        } else if (subscription.planType === 'yearly') {
+          newEndDate.setFullYear(newEndDate.getFullYear() + 1);
+        }
+        
+        return this.updateSubscription(id, {
+          startDate: subscription.endDate,
+          endDate: newEndDate
+        });
+      }
+      
+      // Otherwise, mark as expired
+      return this.updateSubscription(id, {
+        status: 'expired'
+      });
+    }
+    
+    return subscription;
+  }
+  
   // User operations
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -780,6 +1064,8 @@ export class DatabaseStorage implements IStorage {
       level: insertUser.level || 'Level I Candidate',
       // Default premium status
       isPremium: false,
+      // Default Razorpay customer ID
+      razorpayCustomerId: null,
       // Empty reset token fields are handled by the schema defaults
       email: insertUser.email || null
     };
