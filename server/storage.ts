@@ -1132,6 +1132,27 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteTopic(id: number): Promise<void> {
+    // First, get all chapters for this topic
+    const topicChapters = await db.select().from(chapters).where(eq(chapters.topicId, id));
+    
+    // For each chapter, delete related questions
+    for (const chapter of topicChapters) {
+      await db.delete(questions).where(eq(questions.chapterId, chapter.id));
+    }
+    
+    // Delete questions directly linked to this topic (without chapter)
+    await db.delete(questions).where(eq(questions.topicId, id));
+    
+    // Delete all chapters for this topic
+    await db.delete(chapters).where(eq(chapters.topicId, id));
+    
+    // Delete user progress for this topic
+    await db.delete(userProgress).where(eq(userProgress.topicId, id));
+    
+    // Delete practice sets for this topic
+    await db.delete(practiceSets).where(eq(practiceSets.topicId, id));
+    
+    // Finally, delete the topic itself
     await db.delete(topics).where(eq(topics.id, id));
   }
   
