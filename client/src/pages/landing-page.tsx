@@ -96,24 +96,23 @@ export default function LandingPage() {
       }
       
       // Create order
-      const response = await apiRequest('POST', '/api/create-subscription-order', {
-        planType,
-        amount
+      const response = await apiRequest('POST', '/api/subscription/create-order', {
+        planId: planType.toLowerCase()
       });
       
       const orderData = await response.json();
       
-      if (!orderData.id) {
+      if (!orderData.orderId) {
         throw new Error("Failed to create order");
       }
       
       const options = {
-        key: orderData.keyId, // From the order response
-        amount: orderData.amount,
-        currency: "INR",
+        key: process.env.RAZORPAY_KEY_ID || 'rzp_test_dummy_key_id', // Public key
+        amount: orderData.amount * 100, // Amount is in paise
+        currency: orderData.currency,
         name: "CharterBuddyy Practice Hub",
         description: `${planType} Plan Subscription`,
-        order_id: orderData.id,
+        order_id: orderData.orderId,
         handler: function(response: any) {
           // Handle successful payment
           verifyPayment(response, orderData);
@@ -153,7 +152,7 @@ export default function LandingPage() {
   
   const verifyPayment = async (paymentResponse: any, orderData: any) => {
     try {
-      const response = await apiRequest('POST', '/api/verify-payment', {
+      const response = await apiRequest('POST', '/api/subscription/verify-payment', {
         razorpay_payment_id: paymentResponse.razorpay_payment_id,
         razorpay_order_id: paymentResponse.razorpay_order_id,
         razorpay_signature: paymentResponse.razorpay_signature,
@@ -170,7 +169,7 @@ export default function LandingPage() {
         
         // Redirect to auth page
         setTimeout(() => {
-          navigate('/auth');
+          window.location.href = '/auth';
         }, 1500);
       } else {
         throw new Error("Payment verification failed");
@@ -188,7 +187,7 @@ export default function LandingPage() {
   };
 
   const handleBasicAccess = () => {
-    navigate('/auth');
+    window.location.href = '/auth';
   };
 
   return (
