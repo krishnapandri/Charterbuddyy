@@ -98,7 +98,7 @@ export default function AuthPage() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       // Use window.location directly
-      window.location.href = '/';
+      window.location.href = '/dashboard';
     },
     onError: (error: Error) => {
       toast({
@@ -124,7 +124,7 @@ export default function AuthPage() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       // Use window.location directly
-      window.location.href = '/';
+      window.location.href = '/dashboard';
     },
     onError: (error: Error) => {
       toast({
