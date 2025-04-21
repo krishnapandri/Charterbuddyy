@@ -46,7 +46,9 @@ function Router() {
       <AdminRoute path="/admin/student-analytics" component={StudentAnalytics} />
       
       {/* Public routes */}
-      <Route path="/" component={LandingPage} />
+      {/* Temporarily disabled landing page for premium access */}
+      {/* <Route path="/" component={LandingPage} /> */}
+      <Route path="/" component={AuthPage} /> {/* Redirecting root to auth page */}
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

@@ -24,7 +24,8 @@ export function AdminRoute({
   if (!user || user.role !== 'admin') {
     return (
       <Route path={path}>
-        <Redirect to="/" />
+        {/* Redirecting to auth page instead of root (which was landing page) */}
+        <Redirect to="/auth" />
       </Route>
     );
   }
