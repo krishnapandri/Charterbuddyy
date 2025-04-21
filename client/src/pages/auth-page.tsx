@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -97,7 +97,8 @@ export default function AuthPage() {
         description: 'Welcome back!',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      setLocation('/');
+      // Use window.location directly
+      window.location.href = '/dashboard';
     },
     onError: (error: Error) => {
       toast({
@@ -122,7 +123,8 @@ export default function AuthPage() {
         description: 'Your account has been created. Welcome!',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      setLocation('/');
+      // Use window.location directly
+      window.location.href = '/dashboard';
     },
     onError: (error: Error) => {
       toast({

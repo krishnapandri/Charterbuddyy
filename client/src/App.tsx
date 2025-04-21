@@ -11,6 +11,7 @@ import ManageChapters from "@/pages/manage-chapters";
 import ManageTopics from "@/pages/manage-topics";
 import Subscription from "@/pages/subscription";
 import AuthPage from "@/pages/auth-page";
+import LandingPage from "@/pages/landing-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { AdminRoute } from "@/lib/admin-route";
@@ -26,7 +27,7 @@ function Router() {
   return (
     <Switch>
       {/* Standard user routes */}
-      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/dashboard" component={Dashboard} />
       <ProtectedRoute path="/practice/:topicId" component={Practice} />
       <ProtectedRoute path="/analytics" component={Analytics} />
       <ProtectedRoute path="/subscription" component={Subscription} />
@@ -45,6 +46,7 @@ function Router() {
       <AdminRoute path="/admin/student-analytics" component={StudentAnalytics} />
       
       {/* Public routes */}
+      <Route path="/" component={LandingPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

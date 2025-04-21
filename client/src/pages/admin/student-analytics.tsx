@@ -75,7 +75,11 @@ export default function StudentAnalytics() {
   // Redirect if not admin
   if (userData && userData.role !== 'admin') {
     setLocation('/');
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Redirecting...</p>
+      </div>
+    );
   }
 
   if (userLoading || usersLoading || topicsLoading) {
