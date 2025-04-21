@@ -333,7 +333,7 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
               )}
 
               {/* Topics list with collapsible chapters */}
-              <div className="mt-6">
+              <div>
                 <div className="px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                   Practice Topics
                 </div>
