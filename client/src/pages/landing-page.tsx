@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -71,7 +71,7 @@ const PricingTier = ({
 );
 
 export default function LandingPage() {
-  const [, navigate] = useNavigate();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isPending, setIsPending] = useState(false);
 
