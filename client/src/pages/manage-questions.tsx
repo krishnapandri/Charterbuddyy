@@ -1,20 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { SideNavigation } from '@/components/layout/side-navigation';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PlusCircle, Save } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, Trash, Edit, RefreshCw } from 'lucide-react';
 import { insertQuestionSchema } from '@shared/schema';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
+import { 
+  AlertDialog,
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from '@/components/ui/alert-dialog';
 
 // Extended schema with validation
 const questionFormSchema = insertQuestionSchema.extend({
@@ -49,6 +60,14 @@ export default function ManageQuestions() {
   const { data: chaptersData, isLoading: chaptersLoading } = useQuery({
     queryKey: ['/api/chapters'],
   });
+  
+  // Fetch all questions (for list view)
+  const { data: questionsData, isLoading: questionsLoading } = useQuery({
+    queryKey: ['/api/questions'],
+  });
+  
+  // State for selected question to delete
+  const [questionToDelete, setQuestionToDelete] = useState<any>(null);
   
   const form = useForm<QuestionFormValues>({
     resolver: zodResolver(questionFormSchema),
@@ -85,8 +104,16 @@ export default function ManageQuestions() {
     if (chaptersData) {
       const filtered = chaptersData.filter((chapter: any) => chapter.topicId === topicId);
       setFilteredChapters(filtered);
-      if(filtered && filtered.length==1)
-          form.setValue('chapterId',filtered[0].id); // set top 1 chapter
+      
+      // If there's exactly one chapter, select it automatically
+      if (filtered && filtered.length === 1) {
+        form.setValue('chapterId', filtered[0].id);
+      }
+      // If there are no chapters, create a null chapter option to avoid form validation errors
+      else if (filtered && filtered.length === 0) {
+        // Clear chapter selection but don't block the field
+        form.setValue('chapterId', 0);
+      }
     }
   };
   
@@ -96,8 +123,15 @@ export default function ManageQuestions() {
     if (topicId && chaptersData) {
       const filtered = chaptersData.filter((chapter: any) => chapter.topicId === topicId);
       setFilteredChapters(filtered);
-      if(filtered && filtered.length==1)
-        form.setValue('chapterId',filtered[0].id); // set top 1 chapter
+      
+      // If there's exactly one chapter, select it automatically
+      if (filtered && filtered.length === 1) {
+        form.setValue('chapterId', filtered[0].id);
+      }
+      // If there are no chapters, don't block the field
+      else if (filtered && filtered.length === 0) {
+        form.setValue('chapterId', 0);
+      }
     }
   }, [formValues.topicId, chaptersData]);
 
@@ -135,6 +169,30 @@ export default function ManageQuestions() {
       toast({
         title: 'Error',
         description: 'Failed to create question',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Delete question mutation
+  const deleteQuestionMutation = useMutation({
+    mutationFn: (id: number) => apiRequest('DELETE', `/api/questions/${id}`),
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Question deleted successfully',
+      });
+      
+      // Clear selected question
+      setQuestionToDelete(null);
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete question',
         variant: 'destructive',
       });
     },
@@ -207,7 +265,98 @@ export default function ManageQuestions() {
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 space-y-6">
+          {/* Questions List */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <RefreshCw className="mr-2" size={20} />
+                Existing Questions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {questionsLoading ? (
+                <div className="py-4 text-center">Loading questions...</div>
+              ) : questionsData && questionsData.length > 0 ? (
+                <div className="border rounded-md">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="px-4 py-3 text-left font-medium">ID</th>
+                        <th className="px-4 py-3 text-left font-medium">Topic</th>
+                        <th className="px-4 py-3 text-left font-medium">Chapter</th>
+                        <th className="px-4 py-3 text-left font-medium">Question</th>
+                        <th className="px-4 py-3 text-left font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {questionsData.map((question: any) => {
+                        // Find related topic and chapter names
+                        const topic = topicsData?.find((t: any) => t.id === question.topicId);
+                        const chapter = chaptersData?.find((c: any) => c.id === question.chapterId);
+                        
+                        return (
+                          <tr key={question.id} className="border-b">
+                            <td className="px-4 py-3 text-left">{question.id}</td>
+                            <td className="px-4 py-3 text-left">{topic?.name || 'Unknown Topic'}</td>
+                            <td className="px-4 py-3 text-left">{chapter?.name || 'No Chapter'}</td>
+                            <td className="px-4 py-3 text-left">
+                              {question.questionText.length > 100 
+                                ? `${question.questionText.substring(0, 100)}...` 
+                                : question.questionText}
+                            </td>
+                            <td className="px-4 py-3 text-left">
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm"
+                                    onClick={() => setQuestionToDelete(question)}
+                                    className="flex items-center"
+                                  >
+                                    <Trash className="h-4 w-4 mr-1" />
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will permanently delete this question. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setQuestionToDelete(null)}>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => {
+                                        if (questionToDelete) {
+                                          deleteQuestionMutation.mutate(questionToDelete.id);
+                                        }
+                                      }}
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-gray-500">
+                  No questions found. Use the form below to add your first question.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Add Question Form */}
           <Card>
             <CardContent className="pt-6">
               <h2 className="text-xl font-bold mb-6 flex items-center">
