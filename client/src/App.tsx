@@ -12,6 +12,8 @@ import ManageTopics from "@/pages/manage-topics";
 import Subscription from "@/pages/subscription";
 import AuthPage from "@/pages/auth-page";
 import LandingPage from "@/pages/landing-page";
+import Settings from "@/pages/settings";
+import HelpCenter from "@/pages/help-center";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { AdminRoute } from "@/lib/admin-route";
@@ -31,6 +33,9 @@ function Router() {
       <ProtectedRoute path="/practice/:topicId" component={Practice} />
       <ProtectedRoute path="/analytics" component={Analytics} />
       <ProtectedRoute path="/subscription" component={Subscription} />
+      <ProtectedRoute path="/settings" component={Settings} />
+      <ProtectedRoute path="/help-center" component={HelpCenter} />
+      
       {/* Management routes for admin users only */}
       <AdminRoute path="/manage-questions" component={ManageQuestions} />
       <AdminRoute path="/manage-chapters" component={ManageChapters} />
@@ -44,6 +49,8 @@ function Router() {
       <AdminRoute path="/admin/practice-sets" component={AdminPracticeSets} />
       <AdminRoute path="/admin/users" component={AdminUsers} />
       <AdminRoute path="/admin/student-analytics" component={StudentAnalytics} />
+      <AdminRoute path="/admin/settings" component={Settings} />
+      <AdminRoute path="/admin/help-center" component={HelpCenter} />
       
       {/* Public routes */}
       {/* Temporarily disabled landing page for premium access */}

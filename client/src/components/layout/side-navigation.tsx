@@ -495,14 +495,24 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
                   Subscription
                 </div>
               </Link> */}
-              <div className="flex items-center text-sm text-neutral-800 hover:text-primary cursor-pointer">
-                <Settings className="h-5 w-5 text-neutral-400 mr-3" />
-                Settings
-              </div>
-              <div className="flex items-center mt-3 text-sm text-neutral-800 hover:text-primary cursor-pointer">
-                <HelpCircle className="h-5 w-5 text-neutral-400 mr-3" />
-                Help Center
-              </div>
+              <Link href="/settings">
+                <div className={cn(
+                  "flex items-center text-sm text-neutral-800 hover:text-primary cursor-pointer",
+                  location === "/settings" && "text-primary"
+                )}>
+                  <Settings className="h-5 w-5 text-neutral-400 mr-3" />
+                  Settings
+                </div>
+              </Link>
+              <Link href="/help-center">
+                <div className={cn(
+                  "flex items-center mt-3 text-sm text-neutral-800 hover:text-primary cursor-pointer",
+                  location === "/help-center" && "text-primary"
+                )}>
+                  <HelpCircle className="h-5 w-5 text-neutral-400 mr-3" />
+                  Help Center
+                </div>
+              </Link>
               <div 
                 className="flex items-center mt-3 text-sm text-neutral-800 hover:text-destructive cursor-pointer"
                 onClick={handleLogout}
