@@ -11,11 +11,12 @@ import {
   insertQuestionSchema,
   insertTopicSchema,
   insertChapterSchema,
-  userAnswers
+  userAnswers,
+  users
 } from "@shared/schema";
 import { z } from "zod";
-import { setupAuth, hashPassword } from "./auth";
-import { sendPasswordResetEmail } from "./email";
+import { setupAuth, hashPassword, comparePasswords } from "./auth";
+import { sendPasswordResetEmail, sendContactFormEmail } from "./email";
 import { eq, and } from "drizzle-orm";
 import { 
   createSubscriptionOrder, 
@@ -27,6 +28,28 @@ import {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
+  
+  // Define validation schemas
+  const updateProfileSchema = z.object({
+    username: z.string().min(3).max(50).optional(),
+    email: z.string().email().optional(),
+  });
+  
+  const updateNotificationsSchema = z.object({
+    practiceReminders: z.boolean().optional(),
+    newContentAlerts: z.boolean().optional(),
+    progressUpdates: z.boolean().optional(),
+  });
+  
+  const changePasswordSchema = z.object({
+    currentPassword: z.string().min(6),
+    newPassword: z.string().min(6).max(100),
+  });
+  
+  const contactFormSchema = z.object({
+    subject: z.string().min(5).max(100),
+    message: z.string().min(10),
+  });
 
   // Middleware to check if user is admin
   const isAdmin = (req: Request, res: Response, next: NextFunction) => {
@@ -75,6 +98,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.json(topic);
+  });
+  
+  // PUT /api/updateProfile - Update user profile
+  app.put("/api/updateProfile", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const userId = req.user.id;
+      const data = updateProfileSchema.parse(req.body);
+      
+      // Check if username exists if it's being changed
+      if (data.username) {
+        const existingUser = await storage.getUserByUsername(data.username);
+        if (existingUser && existingUser.id !== userId) {
+          return res.status(400).json({ message: "Username already exists" });
+        }
+      }
+      
+      // Update user profile
+      await db.update(users)
+        .set(data)
+        .where(eq(users.id, userId));
+      
+      const updatedUser = await storage.getUser(userId);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Don't send password in response
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      // Log activity
+      await storage.createUserActivity({
+        userId,
+        activityType: 'profile_updated',
+        details: { 
+          changes: Object.keys(data),
+          timestamp: new Date()
+        }
+      });
+      
+      res.json({
+        user: userWithoutPassword,
+        message: "Profile updated successfully"
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      res.status(500).json({ message: "Error updating profile" });
+    }
+  });
+  
+  // PUT /api/updateNotifications - Update notification preferences
+  app.put("/api/updateNotifications", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const userId = req.user.id;
+      const data = updateNotificationsSchema.parse(req.body);
+      
+      // Get current preferences or create default if none exist
+      let currentPreferences = req.user.notificationPreferences || {
+        practiceReminders: true,
+        newContentAlerts: true,
+        progressUpdates: true
+      };
+      
+      // Update with new values
+      const updatedPreferences = {
+        ...currentPreferences,
+        ...data
+      };
+      
+      // Update user
+      await db.update(users)
+        .set({ notificationPreferences: updatedPreferences })
+        .where(eq(users.id, userId));
+      
+      res.json({
+        preferences: updatedPreferences,
+        message: "Notification preferences updated successfully"
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      res.status(500).json({ message: "Error updating notification preferences" });
+    }
+  });
+  
+  // PUT /api/changePassword - Change user password
+  app.put("/api/changePassword", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const userId = req.user.id;
+      const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+      
+      // Get user
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Verify current password
+      const passwordMatch = await comparePasswords(currentPassword, user.password);
+      if (!passwordMatch) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+      
+      // Hash and save new password
+      const hashedPassword = await hashPassword(newPassword);
+      await db.update(users)
+        .set({ password: hashedPassword })
+        .where(eq(users.id, userId));
+      
+      // Log activity
+      await storage.createUserActivity({
+        userId,
+        activityType: 'password_changed',
+        details: { timestamp: new Date() }
+      });
+      
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      res.status(500).json({ message: "Error changing password" });
+    }
+  });
+  
+  // POST /api/contactSupport - Send contact form message
+  app.post("/api/contactSupport", async (req, res) => {
+    try {
+      const { subject, message } = contactFormSchema.parse(req.body);
+      
+      let userInfo = undefined;
+      if (req.isAuthenticated()) {
+        const user = await storage.getUser(req.user.id);
+        if (user) {
+          userInfo = {
+            name: user.username,
+            email: user.email || 'No email provided'
+          };
+        }
+      }
+      
+      // Send email
+      const emailSent = await sendContactFormEmail(subject, message, userInfo);
+      
+      if (emailSent) {
+        // Log if user is authenticated
+        if (req.isAuthenticated()) {
+          await storage.createUserActivity({
+            userId: req.user.id,
+            activityType: 'contact_support',
+            details: { subject, timestamp: new Date() }
+          });
+        }
+        
+        res.json({ message: "Message sent successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to send message" });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      res.status(500).json({ message: "Error sending message" });
+    }
   });
 
   // GET /api/topic-questions/:topicId - Get questions by topic

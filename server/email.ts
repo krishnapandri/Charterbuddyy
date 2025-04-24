@@ -96,3 +96,74 @@ ${appName} Team
   
   return sendEmail({ to: email, subject, text, html });
 }
+
+/**
+ * Send a contact form email
+ */
+export async function sendContactFormEmail(
+  subject: string,
+  message: string,
+  fromUser?: { name: string; email: string }
+): Promise<boolean> {
+  // App name from environment variable with fallback
+  const appName = process.env.APP_NAME || 'CFA Practice Hub';
+  
+  // Admin email (where support requests are sent)
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
+  
+  const userInfo = fromUser 
+    ? `From: ${fromUser.name} (${fromUser.email})`
+    : 'From: Anonymous User';
+  
+  const emailSubject = `${appName} - Support Request: ${subject}`;
+  const text = `
+${userInfo}
+
+Subject: ${subject}
+
+Message:
+${message}
+  `;
+  
+  const primaryColor = process.env.EMAIL_PRIMARY_COLOR || '#4f46e5'; // Default to indigo
+  
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Support Request</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: ${primaryColor}; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; border: 1px solid #ddd; border-top: none; }
+    .user-info { background-color: #f5f5f5; padding: 10px; margin-bottom: 20px; }
+    .message { white-space: pre-line; }
+    .footer { font-size: 12px; color: #777; margin-top: 30px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>New Support Request</h1>
+    </div>
+    <div class="content">
+      <div class="user-info">
+        <strong>${userInfo}</strong>
+      </div>
+      <h2>Subject: ${subject}</h2>
+      <div class="message">
+        ${message.replace(/\n/g, '<br>')}
+      </div>
+    </div>
+    <div class="footer">
+      <p>This message was sent from the ${appName} Help Center.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+  
+  return sendEmail({ to: adminEmail, subject: emailSubject, text, html });
+}
