@@ -182,7 +182,7 @@ export default function Practice() {
       if (intervalId) {
         clearInterval(intervalId);
       }
-      setLocation('/'); // Go back to dashboard
+      setLocation('/dashboard'); // Explicitly navigate to dashboard instead of root
     }
   };
 
@@ -191,13 +191,13 @@ export default function Practice() {
     if (intervalId) {
       clearInterval(intervalId);
     }
-    setLocation('/');
+    setLocation('/dashboard');
   };
 
   // Redirect admin users away from practice page
   useEffect(() => {
     if (userData && userData.role === 'admin') {
-      setLocation('/');
+      setLocation('/dashboard');
     }
   }, [userData, setLocation]);
 
