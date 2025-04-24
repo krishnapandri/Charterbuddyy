@@ -109,16 +109,19 @@ export default function Practice() {
 
   // Initialize practice session when questions are loaded
   useEffect(() => {
-    console.log("Questions data:", questionsData, "Topic ID:", topicId);
+    console.log("Questions data:", questionsData, "Topic ID:", topicId, "Chapter ID:", chapterId);
+    // Always reset the questions array when data is loaded to avoid showing questions from other chapters
     if (questionsData && questionsData.length > 0) {
       // Take a subset of questions for the practice session
       setQuestions(questionsData.slice(0, 10));
       setCurrentQuestionIndex(0);
       startTimer();
     } else if (questionsData && questionsData.length === 0) {
-      console.log("No questions found for topic ID:", topicId);
+      // Ensure we clear any previously loaded questions when there are none for this chapter
+      setQuestions([]);
+      console.log("No questions found for topic ID:", topicId, "and chapter ID:", chapterId);
     }
-  }, [questionsData, topicId]);
+  }, [questionsData, topicId, chapterId]);
 
   // Timer functions
   const startTimer = () => {
@@ -335,8 +338,10 @@ export default function Practice() {
                   <BookOpen className="h-16 w-16 text-primary/40 mb-4" />
                   <h3 className="text-xl font-bold text-neutral-800 mb-4">No Questions Available</h3>
                   <p className="text-neutral-600 mb-6 max-w-md">
-                    There are currently no practice questions available for this topic. 
-                    Please check back later or select another topic.
+                    {chapterId 
+                      ? `No quizzes available for this chapter yet. Please select another chapter or topic.`
+                      : `There are currently no practice questions available for this topic. Please check back later or select another topic.`
+                    }
                   </p>
                   <button 
                     onClick={handleBackToDashboard}
