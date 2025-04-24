@@ -17,6 +17,11 @@ export const users = pgTable("users", {
   lastLoginDate: timestamp("last_login_date").notNull().default(new Date()),
   resetPasswordToken: text("reset_password_token"),
   resetPasswordExpires: timestamp("reset_password_expires"),
+  notificationPreferences: json("notification_preferences").$type<{
+    practiceReminders: boolean;
+    newContentAlerts: boolean;
+    progressUpdates: boolean;
+  }>(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

@@ -1,7 +1,7 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { SideNavigation } from '@/components/layout/side-navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { 
   Accordion, 
   AccordionContent, 
@@ -10,9 +10,27 @@ import {
 } from '@/components/ui/accordion';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Mail } from 'lucide-react';
+import { Search, Mail, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+// Validation schema
+const contactFormSchema = z.object({
+  subject: z.string().min(5, "Subject must be at least 5 characters"),
+  message: z.string().min(10, "Message must be at least 10 characters"),
+});
 
 export default function HelpCenter() {
+  const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [contactFormStatus, setContactFormStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  
   // Fetch user data
   const { data: userData, isLoading: userLoading } = useQuery({
     queryKey: ['/api/user'],
@@ -25,15 +43,48 @@ export default function HelpCenter() {
     retry: false,
   });
 
-  if (userLoading || topicsLoading) {
-    return <div className="p-8">Loading...</div>;
-  }
+  // Setup contact form
+  const contactForm = useForm<z.infer<typeof contactFormSchema>>({
+    resolver: zodResolver(contactFormSchema),
+    defaultValues: {
+      subject: '',
+      message: '',
+    },
+  });
 
-  const topics = topicsData?.map((topic: any) => ({
-    id: topic.id,
-    name: topic.name,
-    icon: topic.icon,
-  }));
+  // Contact form mutation
+  const contactMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof contactFormSchema>) => {
+      return apiRequest('POST', '/api/contactSupport', data);
+    },
+    onSuccess: () => {
+      contactForm.reset();
+      setContactFormStatus('success');
+      toast({
+        title: "Message sent",
+        description: "Your message has been sent successfully. We'll get back to you soon.",
+      });
+      
+      // Reset status after a delay
+      setTimeout(() => setContactFormStatus('idle'), 5000);
+    },
+    onError: (error) => {
+      setContactFormStatus('error');
+      toast({
+        title: "Error sending message",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
+      
+      // Reset status after a delay
+      setTimeout(() => setContactFormStatus('idle'), 5000);
+    },
+  });
+
+  // Handle contact form submission
+  const onContactSubmit = (data: z.infer<typeof contactFormSchema>) => {
+    contactMutation.mutate(data);
+  };
 
   const faqs = [
     {
@@ -65,14 +116,49 @@ export default function HelpCenter() {
       id: 'faq-6',
       question: 'How do streaks work?',
       answer: 'Streaks track your consecutive days of practice. Each day you complete at least one practice session, your streak count increases. Maintaining a streak helps build consistent study habits.'
+    },
+    {
+      id: 'faq-7',
+      question: 'Is there a mobile app?',
+      answer: 'Currently, we offer a responsive web application that works well on mobile devices, but a dedicated mobile app is planned for future release.'
+    },
+    {
+      id: 'faq-8',
+      question: 'How can I get a premium subscription?',
+      answer: 'Premium subscriptions can be purchased from the subscription page. We offer monthly and annual plans with additional features and content.'
     }
   ];
+
+  // Filter FAQs based on search query
+  const filteredFaqs = searchQuery.trim() === '' 
+    ? faqs 
+    : faqs.filter(faq => {
+        const query = searchQuery.toLowerCase();
+        return (
+          faq.question.toLowerCase().includes(query) || 
+          faq.answer.toLowerCase().includes(query)
+        );
+      });
+
+  if (userLoading || topicsLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const topics = topicsData?.map((topic: any) => ({
+    id: topic.id,
+    name: topic.name,
+    icon: topic.icon,
+  })) || [];
 
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar Navigation */}
       <SideNavigation
-        topics={topics || []}
+        topics={topics}
         user={{
           username: userData?.username || 'User',
           level: userData?.level || 'CFA Candidate',
@@ -94,6 +180,8 @@ export default function HelpCenter() {
               <Input 
                 placeholder="Search for help..." 
                 className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
@@ -101,19 +189,32 @@ export default function HelpCenter() {
           <Card className="mb-8">
             <CardHeader>
               <CardTitle>Frequently Asked Questions</CardTitle>
-              <CardDescription>Common questions about using CharterBuddyy Practice Hub</CardDescription>
+              <CardDescription>
+                {searchQuery.trim() !== '' 
+                  ? `Showing ${filteredFaqs.length} results for "${searchQuery}"` 
+                  : 'Common questions about using CharterBuddyy Practice Hub'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Accordion type="single" collapsible className="w-full">
-                {faqs.map((faq) => (
-                  <AccordionItem key={faq.id} value={faq.id}>
-                    <AccordionTrigger className="text-left font-medium">
-                      {faq.question}
-                    </AccordionTrigger>
-                    <AccordionContent>{faq.answer}</AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
+              {filteredFaqs.length > 0 ? (
+                <Accordion type="single" collapsible className="w-full">
+                  {filteredFaqs.map((faq) => (
+                    <AccordionItem key={faq.id} value={faq.id}>
+                      <AccordionTrigger className="text-left font-medium">
+                        {faq.question}
+                      </AccordionTrigger>
+                      <AccordionContent>{faq.answer}</AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              ) : (
+                <div className="text-center py-8">
+                  <h3 className="text-lg font-semibold mb-2">No results found</h3>
+                  <p className="text-neutral-500">
+                    We couldn't find any FAQs matching your search. Try different keywords or contact support below.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -123,20 +224,80 @@ export default function HelpCenter() {
               <CardDescription>Can't find what you're looking for? Send us a message</CardDescription>
             </CardHeader>
             <CardContent>
-              <form className="space-y-4">
-                <div>
-                  <Input placeholder="Subject" className="mb-2" />
-                  <textarea 
-                    className="w-full min-h-[150px] p-3 border border-neutral-200 rounded-md"
-                    placeholder="Describe your issue or question..."
-                  ></textarea>
-                </div>
-                <Button className="flex items-center">
-                  <Mail className="mr-2 h-4 w-4" />
-                  Send Message
-                </Button>
-              </form>
+              {contactFormStatus === 'success' && (
+                <Alert className="bg-green-50 border-green-200 mb-4">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-700">
+                    Message sent successfully! We'll get back to you soon.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {contactFormStatus === 'error' && (
+                <Alert className="bg-red-50 border-red-200 mb-4">
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-700">
+                    Error sending message. Please try again.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              <Form {...contactForm}>
+                <form onSubmit={contactForm.handleSubmit(onContactSubmit)} className="space-y-4">
+                  <FormField
+                    control={contactForm.control}
+                    name="subject"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subject</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Briefly describe your issue" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={contactForm.control}
+                    name="message"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Message</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Provide details about your issue or question..." 
+                            className="min-h-[150px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <Button 
+                    type="submit" 
+                    className="flex items-center"
+                    disabled={contactMutation.isPending}
+                  >
+                    {contactMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="mr-2 h-4 w-4" />
+                        Send Message
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
             </CardContent>
+            <CardFooter className="text-sm text-neutral-500 border-t pt-4">
+              Typically, we respond to inquiries within 24-48 hours during business days.
+            </CardFooter>
           </Card>
         </div>
       </div>

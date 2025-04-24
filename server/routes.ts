@@ -153,6 +153,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // GET /api/notifications - Get notification preferences
+  app.get("/api/notifications", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const userId = req.user.id;
+      
+      // Get the most recent notification preferences from user activity
+      const activities = await db
+        .select()
+        .from(userActivity)
+        .where(and(
+          eq(userActivity.userId, userId),
+          eq(userActivity.activityType, 'notification_preferences')
+        ))
+        .orderBy(desc(userActivity.activityDate))
+        .limit(1);
+      
+      // Default preferences
+      let preferences = {
+        practiceReminders: true,
+        newContentAlerts: true,
+        progressUpdates: false
+      };
+      
+      // If we found any preferences, use those
+      if (activities.length > 0 && activities[0].details) {
+        const details = activities[0].details as any;
+        
+        if (details.practiceReminders !== undefined) {
+          preferences.practiceReminders = details.practiceReminders;
+        }
+        
+        if (details.newContentAlerts !== undefined) {
+          preferences.newContentAlerts = details.newContentAlerts;
+        }
+        
+        if (details.progressUpdates !== undefined) {
+          preferences.progressUpdates = details.progressUpdates;
+        }
+      }
+      
+      res.json({ preferences });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching notification preferences" });
+    }
+  });
+  
   // PUT /api/updateNotifications - Update notification preferences
   app.put("/api/updateNotifications", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -163,26 +213,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const data = updateNotificationsSchema.parse(req.body);
       
-      // Get current preferences or create default if none exist
-      let currentPreferences = req.user.notificationPreferences || {
-        practiceReminders: true,
-        newContentAlerts: true,
-        progressUpdates: true
-      };
+      // Since we haven't migrated the database, store notification preferences in a user_activity entry
+      // Store notification preferences in user metadata activity
+      await storage.createUserActivity({
+        userId,
+        activityType: 'notification_preferences',
+        details: { 
+          ...data,
+          timestamp: new Date()
+        }
+      });
       
-      // Update with new values
-      const updatedPreferences = {
-        ...currentPreferences,
-        ...data
+      // Create a response with the updated preferences
+      const preferences = {
+        practiceReminders: data.practiceReminders ?? true,
+        newContentAlerts: data.newContentAlerts ?? true,
+        progressUpdates: data.progressUpdates ?? false
       };
-      
-      // Update user
-      await db.update(users)
-        .set({ notificationPreferences: updatedPreferences })
-        .where(eq(users.id, userId));
       
       res.json({
-        preferences: updatedPreferences,
+        preferences,
         message: "Notification preferences updated successfully"
       });
     } catch (error) {
