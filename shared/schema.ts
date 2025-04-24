@@ -292,6 +292,7 @@ export const errorLogs = pgTable("error_logs", {
   route: text("route"),
   method: text("method"),
   timestamp: timestamp("timestamp").notNull().default(new Date()),
+  isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
 export const insertErrorLogSchema = createInsertSchema(errorLogs).pick({
@@ -327,6 +328,7 @@ export const payments = pgTable("payments", {
   metadata: json("metadata"), // Additional payment data
   createdAt: timestamp("created_at").notNull().default(new Date()),
   updatedAt: timestamp("updated_at").notNull().default(new Date()),
+  isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
 export const insertPaymentSchema = createInsertSchema(payments).pick({
@@ -364,6 +366,7 @@ export const subscriptions = pgTable("subscriptions", {
   metadata: json("metadata"), // Additional subscription data
   createdAt: timestamp("created_at").notNull().default(new Date()),
   updatedAt: timestamp("updated_at").notNull().default(new Date()),
+  isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).pick({

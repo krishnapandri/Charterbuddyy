@@ -1106,7 +1106,10 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteUser(id: number): Promise<void> {
-    await db.delete(users).where(eq(users.id, id));
+    // Instead of hard delete, perform soft delete
+    await db.update(users)
+      .set({ isDeleted: true })
+      .where(eq(users.id, id));
   }
   
   // Topic operations
