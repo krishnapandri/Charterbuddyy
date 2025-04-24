@@ -263,10 +263,10 @@ export function SideNavigation({ topics, user, activeTopic }: SideNavigationProp
                   Dashboard
                 </div>
                 <div className="mt-1">
-                  <Link href="/">
+                  <Link href="/dashboard">
                     <div className={cn(
                       "block px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer",
-                      location === "/" && "bg-neutral-100"
+                      (location === "/" || location === "/dashboard") && "bg-neutral-100"
                     )}>
                       <div className="flex items-center">
                         <ChevronRight className="h-5 w-5 text-neutral-400 mr-3" />
