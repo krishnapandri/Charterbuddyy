@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { 
   insertUserSchema,
   insertUserAnswerSchema,
@@ -9,11 +10,13 @@ import {
   insertPracticeSetSchema,
   insertQuestionSchema,
   insertTopicSchema,
-  insertChapterSchema
+  insertChapterSchema,
+  userAnswers
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, hashPassword } from "./auth";
 import { sendPasswordResetEmail } from "./email";
+import { eq, and } from "drizzle-orm";
 import { 
   createSubscriptionOrder, 
   verifyPaymentSignature, 
@@ -97,7 +100,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/answers", async (req, res) => {
     try {
       const answerData = insertUserAnswerSchema.parse(req.body);
+      
+      // Check if this is a previous question the user has already answered
+      const previousAnswers = await db
+        .select()
+        .from(userAnswers)
+        .where(and(
+          eq(userAnswers.userId, answerData.userId),
+          eq(userAnswers.questionId, answerData.questionId)
+        ));
+      
+      // Record the user's answer
       const answer = await storage.createUserAnswer(answerData);
+      
+      // If this is the first time answering this question, update progress metrics
+      if (previousAnswers.length === 0) {
+        // Get the question to determine its topic
+        const question = await storage.getQuestion(answerData.questionId);
+        if (question) {
+          const topicId = question.topicId;
+          const progress = await storage.getUserProgressByTopic(answerData.userId, topicId);
+          
+          if (progress) {
+            await storage.createOrUpdateUserProgress({
+              userId: answerData.userId,
+              topicId,
+              // Increment since this is a new question
+              questionsAttempted: progress.questionsAttempted + 1,
+              questionsCorrect: progress.questionsCorrect + (answerData.isCorrect ? 1 : 0),
+              totalTimeSpent: progress.totalTimeSpent + answerData.timeSpent,
+            });
+          } else {
+            await storage.createOrUpdateUserProgress({
+              userId: answerData.userId,
+              topicId,
+              questionsAttempted: 1,
+              questionsCorrect: answerData.isCorrect ? 1 : 0,
+              totalTimeSpent: answerData.timeSpent,
+            });
+          }
+          
+          // Record activity
+          await storage.createUserActivity({
+            userId: answerData.userId,
+            activityType: 'question_answered',
+            topicId,
+            details: { 
+              questionId: answerData.questionId,
+              isCorrect: answerData.isCorrect,
+              timeSpent: answerData.timeSpent,
+              isFirstAttempt: true
+            }
+          });
+        }
+      }
+      
       res.status(201).json(answer);
     } catch (error) {
       if (error instanceof z.ZodError) {
