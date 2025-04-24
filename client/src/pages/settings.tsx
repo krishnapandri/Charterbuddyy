@@ -54,6 +54,12 @@ export default function Settings() {
     retry: false,
   });
 
+  // Fetch notification preferences 
+  const { data: notificationsData, isLoading: notificationsLoading } = useQuery({
+    queryKey: ['/api/notifications'],
+    retry: false,
+  });
+
   // Fetch topics for sidebar
   const { data: topicsData, isLoading: topicsLoading } = useQuery({
     queryKey: ['/api/topics'],
@@ -72,9 +78,9 @@ export default function Settings() {
   const notificationsForm = useForm<z.infer<typeof notificationsFormSchema>>({
     resolver: zodResolver(notificationsFormSchema),
     defaultValues: {
-      practiceReminders: userData?.notificationPreferences?.practiceReminders ?? true,
-      newContentAlerts: userData?.notificationPreferences?.newContentAlerts ?? true,
-      progressUpdates: userData?.notificationPreferences?.progressUpdates ?? false,
+      practiceReminders: notificationsData?.preferences?.practiceReminders ?? true,
+      newContentAlerts: notificationsData?.preferences?.newContentAlerts ?? true,
+      progressUpdates: notificationsData?.preferences?.progressUpdates ?? false,
     },
   });
 
@@ -121,7 +127,7 @@ export default function Settings() {
       return apiRequest('PUT', '/api/updateNotifications', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
       setNotificationFormStatus('success');
       toast({
         title: "Notification preferences updated",
@@ -197,16 +203,21 @@ export default function Settings() {
         username: userData.username || '',
         email: userData.email || '',
       });
-      
+    }
+  }, [userData, profileForm]);
+  
+  // Update notifications form when preferences data arrives
+  React.useEffect(() => {
+    if (notificationsData?.preferences) {
       notificationsForm.reset({
-        practiceReminders: userData.notificationPreferences?.practiceReminders ?? true,
-        newContentAlerts: userData.notificationPreferences?.newContentAlerts ?? true,
-        progressUpdates: userData.notificationPreferences?.progressUpdates ?? false,
+        practiceReminders: notificationsData.preferences.practiceReminders ?? true,
+        newContentAlerts: notificationsData.preferences.newContentAlerts ?? true,
+        progressUpdates: notificationsData.preferences.progressUpdates ?? false,
       });
     }
-  }, [userData, profileForm, notificationsForm]);
+  }, [notificationsData, notificationsForm]);
 
-  if (userLoading || topicsLoading) {
+  if (userLoading || topicsLoading || notificationsLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

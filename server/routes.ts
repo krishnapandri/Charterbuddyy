@@ -12,12 +12,13 @@ import {
   insertTopicSchema,
   insertChapterSchema,
   userAnswers,
-  users
+  users,
+  userActivity
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { sendPasswordResetEmail, sendContactFormEmail } from "./email";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { 
   createSubscriptionOrder, 
   verifyPaymentSignature, 
