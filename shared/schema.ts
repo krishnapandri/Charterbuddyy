@@ -22,6 +22,7 @@ export const users = pgTable("users", {
     newContentAlerts: boolean;
     progressUpdates: boolean;
   }>(),
+  isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -38,6 +39,7 @@ export const topics = pgTable("topics", {
   name: text("name").notNull().unique(),
   description: text("description"),
   icon: text("icon").default("book"),
+  isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
 export const insertTopicSchema = createInsertSchema(topics).pick({
@@ -53,6 +55,7 @@ export const chapters = pgTable("chapters", {
   name: text("name").notNull(),
   description: text("description"),
   order: integer("order").notNull().default(0), // For ordering chapters within a topic
+  isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
 export const insertChapterSchema = createInsertSchema(chapters).pick({
@@ -77,6 +80,7 @@ export const questions = pgTable("questions", {
   correctOption: text("correct_option").notNull(),
   explanation: text("explanation").notNull(),
   difficulty: integer("difficulty").notNull().default(1), // 1-3: easy, medium, hard
+  isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
 export const insertQuestionSchema = createInsertSchema(questions)
@@ -108,6 +112,7 @@ export const userAnswers = pgTable("user_answers", {
   isCorrect: boolean("is_correct").notNull(),
   timeSpent: integer("time_spent").notNull(), // in seconds
   answeredAt: timestamp("answered_at").notNull().default(new Date()),
+  isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
 export const insertUserAnswerSchema = createInsertSchema(userAnswers).pick({
@@ -127,6 +132,7 @@ export const userProgress = pgTable("user_progress", {
   questionsCorrect: integer("questions_correct").notNull().default(0),
   totalTimeSpent: integer("total_time_spent").notNull().default(0), // in seconds
   lastUpdated: timestamp("last_updated").notNull().default(new Date()),
+  isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
 export const insertUserProgressSchema = createInsertSchema(userProgress).pick({
@@ -145,6 +151,7 @@ export const userActivity = pgTable("user_activity", {
   topicId: integer("topic_id").references(() => topics.id),
   details: json("details"),
   activityDate: timestamp("activity_date").notNull().default(new Date()),
+  isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
 export const insertUserActivitySchema = createInsertSchema(userActivity).pick({
@@ -165,6 +172,7 @@ export const practiceSets = pgTable("practice_sets", {
   difficulty: integer("difficulty").notNull().default(1), // 1-3: easy, medium, hard
   isRecommended: boolean("is_recommended").default(false),
   status: text("status").default("new"), // new, needs_review, completed
+  isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
 export const insertPracticeSetSchema = createInsertSchema(practiceSets).pick({
