@@ -37,7 +37,7 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import ConnectPgSimple from "connect-pg-simple";
 import { db, pool } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
