@@ -8,9 +8,10 @@ import { RecommendedSets } from '@/components/dashboard/recommended-sets';
 import { TopicBarChart } from '@/components/analytics/topic-bar-chart';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Bell, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { AdminLoginDialog } from '@/components/admin-login-dialog';
+import { NotificationsPopover } from '@/components/ui/notifications';
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -148,9 +149,9 @@ export default function Dashboard() {
               <h1 className="text-xl font-bold text-primary">CharterBuddyy Practice Hub</h1>
             </div>
             <div className="flex items-center">
-              <button className="mr-4 text-neutral-400 hover:text-neutral-800">
-                <Bell />
-              </button>
+              <div className="mr-4">
+                <NotificationsPopover />
+              </div>
               <div className="relative">
                 <button className="flex items-center text-sm text-neutral-800 focus:outline-none">
                   <span className="hidden md:block mr-2">{userData?.username}</span>
