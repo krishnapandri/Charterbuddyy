@@ -1114,11 +1114,16 @@ export class DatabaseStorage implements IStorage {
   
   // Topic operations
   async getAllTopics(): Promise<Topic[]> {
-    return db.select().from(topics);
+    return db.select().from(topics).where(eq(topics.isDeleted, false));
   }
   
   async getTopic(id: number): Promise<Topic | undefined> {
-    const [topic] = await db.select().from(topics).where(eq(topics.id, id));
+    const [topic] = await db.select().from(topics).where(
+      and(
+        eq(topics.id, id),
+        eq(topics.isDeleted, false)
+      )
+    );
     return topic;
   }
   
@@ -1144,39 +1149,61 @@ export class DatabaseStorage implements IStorage {
     // First, get all chapters for this topic
     const topicChapters = await db.select().from(chapters).where(eq(chapters.topicId, id));
     
-    // For each chapter, delete related questions
+    // For each chapter, soft delete related questions
     for (const chapter of topicChapters) {
-      await db.delete(questions).where(eq(questions.chapterId, chapter.id));
+      await db.update(questions)
+        .set({ isDeleted: true })
+        .where(eq(questions.chapterId, chapter.id));
     }
     
-    // Delete questions directly linked to this topic (without chapter)
-    await db.delete(questions).where(eq(questions.topicId, id));
+    // Soft delete questions directly linked to this topic (without chapter)
+    await db.update(questions)
+      .set({ isDeleted: true })
+      .where(eq(questions.topicId, id));
     
-    // Delete all chapters for this topic
-    await db.delete(chapters).where(eq(chapters.topicId, id));
+    // Soft delete all chapters for this topic
+    await db.update(chapters)
+      .set({ isDeleted: true })
+      .where(eq(chapters.topicId, id));
     
-    // Delete user progress for this topic
-    await db.delete(userProgress).where(eq(userProgress.topicId, id));
+    // Soft delete user progress for this topic
+    await db.update(userProgress)
+      .set({ isDeleted: true })
+      .where(eq(userProgress.topicId, id));
     
-    // Delete practice sets for this topic
-    await db.delete(practiceSets).where(eq(practiceSets.topicId, id));
+    // Soft delete practice sets for this topic
+    await db.update(practiceSets)
+      .set({ isDeleted: true })
+      .where(eq(practiceSets.topicId, id));
     
-    // Finally, delete the topic itself
-    await db.delete(topics).where(eq(topics.id, id));
+    // Finally, soft delete the topic itself
+    await db.update(topics)
+      .set({ isDeleted: true })
+      .where(eq(topics.id, id));
   }
   
   // Chapter operations
   async getChaptersByTopic(topicId: number): Promise<Chapter[]> {
     return db.select()
       .from(chapters)
-      .where(eq(chapters.topicId, topicId))
+      .where(
+        and(
+          eq(chapters.topicId, topicId),
+          eq(chapters.isDeleted, false)
+        )
+      )
       .orderBy(chapters.order);
   }
   
   async getChapter(id: number): Promise<Chapter | undefined> {
     const [chapter] = await db.select()
       .from(chapters)
-      .where(eq(chapters.id, id));
+      .where(
+        and(
+          eq(chapters.id, id),
+          eq(chapters.isDeleted, false)
+        )
+      );
     return chapter;
   }
   
@@ -1201,24 +1228,43 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteChapter(id: number): Promise<void> {
-    // First, delete all questions linked to this chapter
-    await db.delete(questions).where(eq(questions.chapterId, id));
+    // First, soft delete all questions linked to this chapter
+    await db.update(questions)
+      .set({ isDeleted: true })
+      .where(eq(questions.chapterId, id));
     
-    // Then delete the chapter itself
-    await db.delete(chapters).where(eq(chapters.id, id));
+    // Then soft delete the chapter itself
+    await db.update(chapters)
+      .set({ isDeleted: true })
+      .where(eq(chapters.id, id));
   }
   
   // Question operations
   async getQuestionsByTopic(topicId: number): Promise<Question[]> {
-    return db.select().from(questions).where(eq(questions.topicId, topicId));
+    return db.select().from(questions).where(
+      and(
+        eq(questions.topicId, topicId),
+        eq(questions.isDeleted, false)
+      )
+    );
   }
   
   async getQuestionsByChapter(chapterId: number): Promise<Question[]> {
-    return db.select().from(questions).where(eq(questions.chapterId, chapterId));
+    return db.select().from(questions).where(
+      and(
+        eq(questions.chapterId, chapterId),
+        eq(questions.isDeleted, false)
+      )
+    );
   }
   
   async getQuestion(id: number): Promise<Question | undefined> {
-    const [question] = await db.select().from(questions).where(eq(questions.id, id));
+    const [question] = await db.select().from(questions).where(
+      and(
+        eq(questions.id, id),
+        eq(questions.isDeleted, false)
+      )
+    );
     return question;
   }
   
@@ -1241,7 +1287,10 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteQuestion(id: number): Promise<void> {
-    await db.delete(questions).where(eq(questions.id, id));
+    // Soft delete question
+    await db.update(questions)
+      .set({ isDeleted: true })
+      .where(eq(questions.id, id));
   }
   
   // User answer operations
@@ -1381,7 +1430,10 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deletePracticeSet(id: number): Promise<void> {
-    await db.delete(practiceSets).where(eq(practiceSets.id, id));
+    // Soft delete practice set
+    await db.update(practiceSets)
+      .set({ isDeleted: true })
+      .where(eq(practiceSets.id, id));
   }
   
   // Error logging operations
