@@ -796,19 +796,6 @@ export class DatabaseStorage implements IStorage {
     });
   }
   
-  // Helper method to check if a user has previously answered a question
-  private async hasUserPreviouslyAnswered(userId: number, questionId: number): Promise<boolean> {
-    const previousAnswers = await db
-      .select()
-      .from(userAnswers)
-      .where(and(
-        eq(userAnswers.userId, userId),
-        eq(userAnswers.questionId, questionId)
-      ));
-    
-    return previousAnswers.length > 0; // If there are any previous answers, return true
-  }
-  
   // Payment operations
   async createPayment(insertPayment: InsertPayment): Promise<Payment> {
     const [payment] = await db.insert(payments)
