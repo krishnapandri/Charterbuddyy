@@ -1,0 +1,41 @@
+  private async updateUserProgressAfterAnswer(answer: UserAnswer): Promise<void> {
+    const question = await this.getQuestion(answer.questionId);
+    if (!question) return;
+    
+    const topicId = question.topicId;
+    const progress = await this.getUserProgressByTopic(answer.userId, topicId);
+    
+    // Check if the user has previously answered this question
+    const previousAnswers = await db
+      .select()
+      .from(userAnswers)
+      .where(and(
+        eq(userAnswers.userId, answer.userId),
+        eq(userAnswers.questionId, answer.questionId)
+      ))
+      .limit(2); // Limit query for efficiency
+    
+    // If we have more than 1 record, this question was previously attempted
+    // OR if we have exactly 1 and its ID is not the current one
+    const isRepeatAttempt = previousAnswers.length > 1 || 
+      (previousAnswers.length === 1 && previousAnswers[0].id !== answer.id);
+    
+    if (progress) {
+      await this.createOrUpdateUserProgress({
+        userId: answer.userId,
+        topicId,
+        // Only increment if this is a new question for the user
+        questionsAttempted: isRepeatAttempt ? progress.questionsAttempted : progress.questionsAttempted + 1,
+        questionsCorrect: isRepeatAttempt ? progress.questionsCorrect : 
+                          progress.questionsCorrect + (answer.isCorrect ? 1 : 0),
+        totalTimeSpent: progress.totalTimeSpent + answer.timeSpent,
+      });
+    } else {
+      await this.createOrUpdateUserProgress({
+        userId: answer.userId,
+        topicId,
+        questionsAttempted: 1,
+        questionsCorrect: answer.isCorrect ? 1 : 0,
+        totalTimeSpent: answer.timeSpent,
+      });
+    }
