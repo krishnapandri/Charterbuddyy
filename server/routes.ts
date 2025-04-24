@@ -163,16 +163,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       
-      // Get the most recent notification preferences from user activity
-      const activities = await db
+      // Get user with notification preferences
+      const [user] = await db
         .select()
-        .from(userActivity)
-        .where(and(
-          eq(userActivity.userId, userId),
-          eq(userActivity.activityType, 'notification_preferences')
-        ))
-        .orderBy(desc(userActivity.activityDate))
-        .limit(1);
+        .from(users)
+        .where(eq(users.id, userId));
       
       // Default preferences
       let preferences = {
@@ -181,21 +176,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         progressUpdates: false
       };
       
-      // If we found any preferences, use those
-      if (activities.length > 0 && activities[0].details) {
-        const details = activities[0].details as any;
-        
-        if (details.practiceReminders !== undefined) {
-          preferences.practiceReminders = details.practiceReminders;
-        }
-        
-        if (details.newContentAlerts !== undefined) {
-          preferences.newContentAlerts = details.newContentAlerts;
-        }
-        
-        if (details.progressUpdates !== undefined) {
-          preferences.progressUpdates = details.progressUpdates;
-        }
+      // If we found notification preferences, use those
+      if (user && user.notificationPreferences) {
+        preferences = {
+          ...preferences,
+          ...user.notificationPreferences
+        };
       }
       
       res.json({ preferences });
@@ -214,23 +200,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const data = updateNotificationsSchema.parse(req.body);
       
-      // Since we haven't migrated the database, store notification preferences in a user_activity entry
-      // Store notification preferences in user metadata activity
-      await storage.createUserActivity({
-        userId,
-        activityType: 'notification_preferences',
-        details: { 
-          ...data,
-          timestamp: new Date()
-        }
-      });
-      
-      // Create a response with the updated preferences
+      // Store notification preferences in users table
       const preferences = {
         practiceReminders: data.practiceReminders ?? true,
         newContentAlerts: data.newContentAlerts ?? true,
         progressUpdates: data.progressUpdates ?? false
       };
+      
+      // Update user's notification preferences
+      await db.update(users)
+        .set({ notificationPreferences: preferences })
+        .where(eq(users.id, userId));
+      
+      // Log this activity
+      await storage.createUserActivity({
+        userId,
+        activityType: 'notification_settings_updated',
+        details: { 
+          timestamp: new Date()
+        }
+      });
       
       res.json({
         preferences,

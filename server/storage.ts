@@ -215,7 +215,13 @@ export class MemStorage implements IStorage {
       // Default premium status
       isPremium: false,
       // Default razorpay customer ID
-      razorpayCustomerId: null
+      razorpayCustomerId: null,
+      // Default notification preferences
+      notificationPreferences: {
+        practiceReminders: true,
+        newContentAlerts: true,
+        progressUpdates: false
+      }
     };
     
     this.users.set(id, user);
