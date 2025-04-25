@@ -1309,7 +1309,12 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getUserAnswers(userId: number): Promise<UserAnswer[]> {
-    return db.select().from(userAnswers).where(eq(userAnswers.userId, userId));
+    return db.select().from(userAnswers).where(
+      and(
+        eq(userAnswers.userId, userId),
+        eq(userAnswers.isDeleted, false)
+      )
+    );
   }
   
   async getUserAnswersByTopic(userId: number, topicId: number): Promise<UserAnswer[]> {
@@ -1321,7 +1326,9 @@ export class DatabaseStorage implements IStorage {
     .innerJoin(questions, eq(userAnswers.questionId, questions.id))
     .where(and(
       eq(userAnswers.userId, userId),
-      eq(questions.topicId, topicId)
+      eq(questions.topicId, topicId),
+      eq(userAnswers.isDeleted, false),
+      eq(questions.isDeleted, false)
     ));
     
     // Extract userAnswer from the result
@@ -1330,14 +1337,20 @@ export class DatabaseStorage implements IStorage {
   
   // User progress operations
   async getUserProgress(userId: number): Promise<UserProgress[]> {
-    return db.select().from(userProgress).where(eq(userProgress.userId, userId));
+    return db.select().from(userProgress).where(
+      and(
+        eq(userProgress.userId, userId),
+        eq(userProgress.isDeleted, false)
+      )
+    );
   }
   
   async getUserProgressByTopic(userId: number, topicId: number): Promise<UserProgress | undefined> {
     const [progress] = await db.select().from(userProgress)
       .where(and(
         eq(userProgress.userId, userId),
-        eq(userProgress.topicId, topicId)
+        eq(userProgress.topicId, topicId),
+        eq(userProgress.isDeleted, false)
       ));
     return progress;
   }
@@ -1375,7 +1388,12 @@ export class DatabaseStorage implements IStorage {
   // User activity operations
   async getUserActivity(userId: number, limit: number = 10): Promise<UserActivity[]> {
     return db.select().from(userActivity)
-      .where(eq(userActivity.userId, userId))
+      .where(
+        and(
+          eq(userActivity.userId, userId),
+          eq(userActivity.isDeleted, false)
+        )
+      )
       .orderBy(desc(userActivity.activityDate))
       .limit(limit);
   }
@@ -1393,19 +1411,34 @@ export class DatabaseStorage implements IStorage {
   // Practice sets operations
   async getPracticeSets(topicId?: number): Promise<PracticeSet[]> {
     if (topicId) {
-      return db.select().from(practiceSets).where(eq(practiceSets.topicId, topicId));
+      return db.select().from(practiceSets).where(
+        and(
+          eq(practiceSets.topicId, topicId),
+          eq(practiceSets.isDeleted, false)
+        )
+      );
     }
-    return db.select().from(practiceSets);
+    return db.select().from(practiceSets).where(eq(practiceSets.isDeleted, false));
   }
   
   async getPracticeSet(id: number): Promise<PracticeSet | undefined> {
-    const [practiceSet] = await db.select().from(practiceSets).where(eq(practiceSets.id, id));
+    const [practiceSet] = await db.select().from(practiceSets).where(
+      and(
+        eq(practiceSets.id, id),
+        eq(practiceSets.isDeleted, false)
+      )
+    );
     return practiceSet;
   }
   
   async getRecommendedPracticeSets(userId: number): Promise<PracticeSet[]> {
     return db.select().from(practiceSets)
-      .where(eq(practiceSets.isRecommended, true))
+      .where(
+        and(
+          eq(practiceSets.isRecommended, true),
+          eq(practiceSets.isDeleted, false)
+        )
+      )
       .limit(3);
   }
   
@@ -1450,6 +1483,7 @@ export class DatabaseStorage implements IStorage {
   async getErrorLogs(limit: number = 50): Promise<ErrorLog[]> {
     return db.select()
       .from(errorLogs)
+      .where(eq(errorLogs.isDeleted, false))
       .orderBy(desc(errorLogs.timestamp))
       .limit(limit);
   }
@@ -1457,7 +1491,12 @@ export class DatabaseStorage implements IStorage {
   async getErrorLogsByUser(userId: number, limit: number = 50): Promise<ErrorLog[]> {
     return db.select()
       .from(errorLogs)
-      .where(eq(errorLogs.userId, userId))
+      .where(
+        and(
+          eq(errorLogs.userId, userId),
+          eq(errorLogs.isDeleted, false)
+        )
+      )
       .orderBy(desc(errorLogs.timestamp))
       .limit(limit);
   }

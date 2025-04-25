@@ -4,12 +4,15 @@ import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from '../scripts/seed-db';
 import { storage } from "./storage";
 import { logErrorToDatabase } from "./error-logger";
+import { errorLoggerMiddleware } from "./middleware/error-logger";
 // Set a default session secret if not provided in environment variables
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'cfaprep-secret-key-development';
 //await (async ()=>seedDatabase())();
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+// Add error logger middleware to intercept non-200 responses
+app.use(errorLoggerMiddleware);
 
 app.use((req, res, next) => {
   const start = Date.now();
