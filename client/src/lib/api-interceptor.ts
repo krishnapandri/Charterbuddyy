@@ -1,4 +1,16 @@
-import { apiRequest } from "./queryClient";
+// To avoid circular dependency, we're replicating the basic fetch function
+const basicApiRequest = async (
+  method: string,
+  url: string,
+  data?: unknown | undefined,
+): Promise<Response> => {
+  return fetch(url, {
+    method,
+    headers: data ? { "Content-Type": "application/json" } : {},
+    body: data ? JSON.stringify(data) : undefined,
+    credentials: "include",
+  });
+};
 
 /**
  * Enhanced version of apiRequest that logs errors to the server
@@ -13,7 +25,7 @@ export async function enhancedApiRequest(
   body?: any
 ): Promise<Response> {
   try {
-    const response = await apiRequest(method, url, body);
+    const response = await basicApiRequest(method, url, body);
     
     // If response is not ok, send error details to the server for logging
     if (!response.ok) {
@@ -29,6 +41,12 @@ export async function enhancedApiRequest(
       logClientError(errorDetails).catch(err => {
         console.error("Failed to log client error:", err);
       });
+    }
+    
+    // Only throw if not logging errors
+    if (!response.ok) {
+      const text = (await response.clone().text()) || response.statusText;
+      throw new Error(`${response.status}: ${text}`);
     }
     
     return response;
@@ -73,7 +91,7 @@ async function getResponseContent(response: Response): Promise<string | object> 
  */
 async function logClientError(errorDetails: any): Promise<void> {
   try {
-    await apiRequest("POST", "/api/client-error", {
+    await basicApiRequest("POST", "/api/client-error", {
       errorData: errorDetails,
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
