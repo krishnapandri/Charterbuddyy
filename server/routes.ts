@@ -533,13 +533,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/topics", isAdmin, async (req, res) => {
     try {
       const topicData = insertTopicSchema.parse(req.body);
+      
+      // Check for duplicate topic name
+      const allTopics = await storage.getAllTopics();
+      const duplicateTopic = allTopics.find(
+        t => t.name.toLowerCase() === topicData.name.toLowerCase()
+      );
+      
+      if (duplicateTopic) {
+        return res.status(400).json({ 
+          message: "Topic creation failed",
+          reason: "A topic with this name already exists",
+          details: { duplicateTopicId: duplicateTopic.id }
+        });
+      }
+      
       const topic = await storage.createTopic(topicData);
       res.status(201).json(topic);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ errors: error.errors });
       }
-      res.status(500).json({ message: "Error creating topic" });
+      
+      // Handle database constraint errors
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === '23505') { // PostgreSQL unique violation error code
+        return res.status(400).json({ 
+          message: "Topic creation failed", 
+          reason: "A topic with this name already exists in the database"
+        });
+      }
+      
+      console.error("Error creating topic:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+      res.status(500).json({ 
+        message: "Error creating topic", 
+        reason: errorMessage
+      });
     }
   });
   

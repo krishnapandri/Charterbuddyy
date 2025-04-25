@@ -1128,8 +1128,22 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createTopic(insertTopic: InsertTopic): Promise<Topic> {
-    const [topic] = await db.insert(topics).values(insertTopic).returning();
-    return topic;
+    try {
+      const [topic] = await db.insert(topics).values(insertTopic).returning();
+      return topic;
+    } catch (error: unknown) {
+      // Check for duplicate name constraint violation
+      if (typeof error === 'object' && 
+          error !== null && 
+          'code' in error && 
+          error.code === '23505' && 
+          'constraint' in error && 
+          error.constraint === 'topics_name_unique') {
+        throw new Error(`A topic with the name "${insertTopic.name}" already exists`);
+      }
+      // Re-throw the original error if it's not a duplicate
+      throw error;
+    }
   }
   
   async updateTopic(id: number, topicData: Partial<Topic>): Promise<Topic> {
