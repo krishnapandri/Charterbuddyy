@@ -6,11 +6,6 @@ import { storage } from '../storage';
  * This intercepts all responses and logs details for any that aren't 200 status
  */
 export const errorLoggerMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  // Capture the original end method
-  const originalEnd = res.end;
-  const originalJson = res.json;
-  const originalSend = res.send;
-  
   // Store original URL and method
   const url = req.originalUrl || req.url;
   const method = req.method;
@@ -28,6 +23,10 @@ export const errorLoggerMiddleware = (req: Request, res: Response, next: NextFun
     }
   }
   
+  // Capture original methods
+  const originalJson = res.json;
+  const originalSend = res.send;
+  
   // Extend json method to capture response data
   res.json = function(body: any): Response {
     logErrorIfNeeded(res.statusCode, body);
@@ -40,11 +39,12 @@ export const errorLoggerMiddleware = (req: Request, res: Response, next: NextFun
     return originalSend.apply(res, [body]);
   };
   
-  // Extend end method to capture response status
-  res.end = function(chunk?: any, encoding?: string | undefined, cb?: (() => void) | undefined): Response {
-    logErrorIfNeeded(res.statusCode);
-    return originalEnd.apply(res, [chunk, encoding, cb]);
-  };
+  // Instead of modifying res.end, we'll use the 'finish' event
+  res.on('finish', () => {
+    if (res.statusCode !== 200) {
+      logErrorIfNeeded(res.statusCode);
+    }
+  });
   
   function logErrorIfNeeded(statusCode: number, responseBody?: any) {
     // Only log if status is not 200
@@ -87,8 +87,7 @@ export const errorLoggerMiddleware = (req: Request, res: Response, next: NextFun
           errorStack: null,
           metadata,
           route: url,
-          method,
-          timestamp
+          method
         }).catch(err => {
           console.error('Failed to log HTTP error:', err);
         });

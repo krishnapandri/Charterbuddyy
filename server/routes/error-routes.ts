@@ -22,11 +22,11 @@ router.post('/api/client-error', async (req, res) => {
         url: errorData.url,
         clientInfo,
         userAgent,
+        timestamp,
         ...errorData
       },
       route: errorData.url,
-      method: errorData.method,
-      timestamp: new Date(timestamp)
+      method: errorData.method
     });
     
     res.status(200).json({ success: true });

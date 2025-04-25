@@ -25,6 +25,7 @@ import {
   SUBSCRIPTION_PLANS,
   requirePremium 
 } from "./razorpay";
+import errorRoutes from "./routes/error-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -1257,6 +1258,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Register error logging routes
+  app.use(errorRoutes);
+  
   const httpServer = createServer(app);
   return httpServer;
 }
