@@ -240,7 +240,7 @@ export default function LandingPage() {
                       <p className="text-sm">78%</p>
                     </div>
                   </div>
-                  <p className="text-sm">Based on our user survey data from 2022-2023</p>
+                  {/* <p className="text-sm">Based on our user survey data from 2022-2023</p> */}
                 </div>
               </div>
             </div>
