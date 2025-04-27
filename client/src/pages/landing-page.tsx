@@ -198,27 +198,28 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
               <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                Master the CFA Level I Exam
+                Practice CFA Level 1 Exam Questions
               </h1>
               <p className="text-xl mb-8 text-primary-foreground/90">
                 Join thousands of candidates who've improved their CFA exam scores with our comprehensive practice platform.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Button 
+                {/* <Button 
                   size="lg" 
                   variant="default" 
                   className="bg-white text-primary hover:bg-white/90"
                   onClick={() => handlePayment('Premium', 2999)}
                 >
                   Get Premium Access
-                </Button>
+                </Button> */}
                 <Button 
                   size="lg" 
-                  variant="outline" 
-                  className="border-white text-white hover:bg-white/10"
+                  variant="secondary"
+                  className='text-black' 
+                  // className="border-white text-white hover:bg-white/10"
                   onClick={handleBasicAccess}
                 >
-                  Try Basic Version
+                  Try Free For Now!
                 </Button>
               </div>
             </div>
@@ -310,7 +311,7 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-20 px-4 bg-muted/30">
+      {/* <section className="py-20 px-4 bg-muted/30">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Choose Your Plan</h2>
@@ -366,7 +367,7 @@ export default function LandingPage() {
             />
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Footer */}
       <footer className="bg-muted py-8 px-4">

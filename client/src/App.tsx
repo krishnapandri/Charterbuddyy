@@ -54,7 +54,7 @@ function Router() {
       
       {/* Public routes */}
       {/* Temporarily disabled landing page for premium access */}
-      {/* <Route path="/" component={LandingPage} /> */}
+      <Route path="/" component={LandingPage} />
       <Route path="/">
         {() => <Redirect to="/dashboard" />}
       </Route>
