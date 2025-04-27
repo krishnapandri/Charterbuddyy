@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,9 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { BookOpen, LineChart, CheckCircle, Award, Target } from 'lucide-react';
+import { BookOpen, LineChart, CheckCircle, Award, Target, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 declare global {
   interface Window {
@@ -74,6 +75,44 @@ export default function LandingPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isPending, setIsPending] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+  const { user, isLoading } = useAuth();
+
+  // Check if the user is already logged in
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      setIsChecking(true);
+      try {
+        // Try to fetch the current user
+        const response = await fetch('/api/user');
+        
+        if (response.ok) {
+          // User is logged in, redirect to dashboard
+          toast({
+            title: "Welcome back!",
+            description: "You've been automatically logged in.",
+          });
+          window.location.href = '/dashboard';
+        } else {
+          // User needs to log in or register
+          setIsChecking(false);
+        }
+      } catch (error) {
+        // Error checking login status, continue to landing page
+        setIsChecking(false);
+      }
+    };
+
+    // Only check if we don't already have the user from useAuth
+    if (!isLoading) {
+      if (user) {
+        // User is logged in, redirect to dashboard
+        window.location.href = '/dashboard';
+      } else {
+        setIsChecking(false);
+      }
+    }
+  }, [user, isLoading, toast]);
 
   const loadRazorpayScript = () => {
     return new Promise<void>((resolve) => {
@@ -189,6 +228,18 @@ export default function LandingPage() {
   const handleBasicAccess = () => {
     window.location.href = '/auth';
   };
+  
+  // Show loading screen while checking login status
+  if (isLoading || isChecking) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-lg font-medium">Checking login status...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
