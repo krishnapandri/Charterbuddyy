@@ -274,8 +274,7 @@ export default function LandingPage() {
                 </Button>
               </div>
             </div>
-            <div className="hidden md:block">
-              {/* Illustration or chart showing success rates */}
+            {/* <div className="hidden md:block">
               <div className="bg-white/10 rounded-lg p-8 backdrop-blur-sm">
                 <div className="text-center">
                   <h3 className="text-2xl font-bold mb-4">CFA Pass Rate Comparison</h3>
@@ -291,10 +290,10 @@ export default function LandingPage() {
                       <p className="text-sm">78%</p>
                     </div>
                   </div>
-                  {/* <p className="text-sm">Based on our user survey data from 2022-2023</p> */}
                 </div>
               </div>
-            </div>
+            </div> */}
+            
           </div>
         </div>
       </section>
